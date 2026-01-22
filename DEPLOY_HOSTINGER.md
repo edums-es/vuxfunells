@@ -18,11 +18,20 @@ A Railway é excelente, não tem "Cold Start" (o servidor não dorme) e é muito
    - `JWT_SECRET`: (crie uma senha segura)
    - `ADMIN_PASSWORD`: (senha para entrar no painel admin)
    - `CORS_ORIGIN`: `*` (ou o domínio do seu site na Hostinger)
-   - `STORAGE_DIR`: `/app/storage` (IMPORTANTE para salvar dados)
-6. Vá na aba **Volumes** (ou clique no projeto e depois botão direito > Add Volume).
+   - `STORAGE_DIR`: `/app/storage` (IMPORTANTE para salvar dados se usar Volume)
+   - **(Opcional) Supabase para Arquivos:**
+     - `SUPABASE_URL`: (Sua URL do projeto Supabase)
+     - `SUPABASE_KEY`: (Sua chave anon/service_role)
+     - `SUPABASE_BUCKET`: `uploads` (Crie esse bucket público no Supabase)
+6. **Opção A (Recomendada - Mais Fácil): Usar Volume**
+   - Vá na aba **Volumes** (ou clique no projeto e depois botão direito > Add Volume).
    - Crie um volume e monte ele no caminho: `/app/storage`
-   - **ISSO É CRÍTICO:** Sem o volume, todos os dados (cadastros, funis e uploads) serão apagados toda vez que o servidor reiniciar.
-7. Vá na aba **Settings** > **Networking** e gere um domínio público (Generate Domain).
+   - **ISSO É CRÍTICO:** Sem o volume (ou Supabase), todos os dados (cadastros, funis e uploads) serão apagados toda vez que o servidor reiniciar.
+7. **Opção B: Usar Supabase**
+   - Se configurou as variáveis do Supabase acima, os arquivos serão salvos lá.
+   - Os dados (leads/funis) ainda precisam do Volume se não mudarmos o banco de dados.
+
+8. Vá na aba **Settings** > **Networking** e gere um domínio público (Generate Domain).
    - Copie esse domínio (ex: `https://vuxfunells-production.up.railway.app`).
 
 ---

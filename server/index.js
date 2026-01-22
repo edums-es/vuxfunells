@@ -11,11 +11,25 @@ import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
+import { createClient } from '@supabase/supabase-js';
 import { createJsonStore } from './storage.js';
 import { DEFAULT_FUNNEL_DEFINITION } from './seed.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// --- Configuração Supabase (Opcional) ---
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
+const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'uploads';
+
+let supabase = null;
+if (SUPABASE_URL && SUPABASE_KEY) {
+  console.log('[Storage] Supabase credentials found. Using Supabase Storage.');
+  supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+} else {
+  console.log('[Storage] No Supabase credentials. Using local disk storage (Ephemeral on Railway!).');
+}
 
 // Configuração de Persistência (Railway Volume)
 // Se houver a variável STORAGE_DIR, usa ela. Se não, usa a pasta local do servidor.
@@ -26,15 +40,19 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-const storage = multer.diskStorage({
-  destination: function (_req, _file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (_req, file, cb) {
-    const ext = path.extname(file.originalname);
-    cb(null, nanoid() + ext);
-  }
-});
+// Se tiver Supabase, usa MemoryStorage para pegar o buffer. Se não, DiskStorage.
+const storage = supabase 
+  ? multer.memoryStorage() 
+  : multer.diskStorage({
+      destination: function (_req, _file, cb) {
+        cb(null, uploadDir);
+      },
+      filename: function (_req, file, cb) {
+        const ext = path.extname(file.originalname);
+        cb(null, nanoid() + ext);
+      }
+    });
+
 const upload = multer({ storage });
 
 const PORT = Number(process.env.PORT || 4000);
@@ -534,10 +552,37 @@ app.get('/api/admin/metrics/overview', authRequired, adminRequired, async (_req,
   });
 });
 
-app.post('/api/upload', authRequired, upload.single('file'), (req, res) => {
+app.post('/api/upload', authRequired, upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'no_file' });
-  // Return full URL or relative? Relative is better for portability.
-  // Assuming frontend can handle /uploads/...
+
+  // Handle Supabase Upload
+  if (supabase) {
+    try {
+      const ext = path.extname(req.file.originalname);
+      const filename = `${nanoid()}${ext}`;
+      
+      const { data, error } = await supabase.storage
+        .from(SUPABASE_BUCKET)
+        .upload(filename, req.file.buffer, {
+          contentType: req.file.mimetype,
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      // Get Public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from(SUPABASE_BUCKET)
+        .getPublicUrl(filename);
+
+      return res.json({ url: publicUrl });
+    } catch (err) {
+      console.error('Supabase Upload Error:', err);
+      return res.status(500).json({ error: 'upload_failed' });
+    }
+  }
+
+  // Handle Local Upload (Legacy/Volume)
   const url = `/uploads/${req.file.filename}`;
   res.json({ url });
 });
