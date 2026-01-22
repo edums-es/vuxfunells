@@ -618,7 +618,23 @@ app.get('/api/debug/storage-check', async (_req, res) => {
       results.bucketExists = !!bucket;
       
       if (!bucket) {
-         results.error = `Bucket '${results.env.bucket}' not found in Supabase. Available: ${buckets.map(b => b.name).join(', ')}`;
+         results.error = `Bucket '${results.env.bucket}' not found. Available: ${buckets.map(b => b.name).join(', ')}`;
+         
+         // Auto-fix: Try to create the bucket automatically
+         results.autoFix = { attempt: true, message: "Tentando criar o bucket automaticamente..." };
+         const { data: created, error: createError } = await supabase.storage.createBucket(results.env.bucket, {
+            public: true
+         });
+         
+         if (createError) {
+            results.autoFix.success = false;
+            results.autoFix.error = createError.message;
+            results.autoFix.hint = "Se falhou, sua chave API no Railway pode não ter permissão de admin. Use a chave 'service_role' ou crie o bucket manualmente no painel.";
+         } else {
+            results.autoFix.success = true;
+            results.autoFix.message = "Bucket criado com sucesso! Tente fazer upload novamente.";
+            results.bucketExists = true;
+         }
       }
     }
 
