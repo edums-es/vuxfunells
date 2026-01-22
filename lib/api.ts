@@ -103,7 +103,8 @@ export const adminTokenStorage = {
 };
 
 export async function fetchPublicFunnel(): Promise<PublicFunnelResponse> {
-  return requestJson<PublicFunnelResponse>('/api/public/funnel');
+  // Add timestamp to prevent caching
+  return requestJson<PublicFunnelResponse>(`/api/public/funnel?t=${Date.now()}`);
 }
 
 export async function trackEvent(input: {

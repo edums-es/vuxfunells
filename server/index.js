@@ -157,6 +157,11 @@ app.get('/api/admin/me', authRequired, async (req, res) => {
 });
 
 app.get('/api/public/funnel', async (_req, res) => {
+  // Prevent caching of the public funnel definition so updates are immediate
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+
   const data = await db.read();
   const active = data.funnels.find((f) => f.status === 'active') || data.funnels[0];
   res.json({ id: active.id, version: active.version, name: active.name, definition: active.definition });
