@@ -986,7 +986,7 @@ const AdminFunnels: React.FC = () => {
                               const res = await adminUploadFile(file);
                               updateDoctor({ avatarUrl: res.url });
                             } catch (err) {
-                              alert('Erro ao enviar arquivo');
+                              alert('Erro ao enviar arquivo: ' + (err instanceof Error ? err.message : String(err)));
                             }
                           }} 
                         />
@@ -1494,7 +1494,7 @@ const AdminFunnels: React.FC = () => {
                                         try {
                                           const res = await adminUploadFile(file);
                                           updateComment(idx, cIdx, { avatarUrl: res.url });
-                                        } catch (err) { alert('Erro ao enviar arquivo'); }
+                                        } catch (err) { alert('Erro: ' + (err instanceof Error ? err.message : String(err))); }
                                       }} />
                                     </label>
                                   </div>
@@ -1788,7 +1788,7 @@ const AdminFunnels: React.FC = () => {
                                                 const newItems = [...block.content.items];
                                                 newItems[i] = { ...item, avatar: res.url };
                                                 updateBlock(idx, { content: { ...block.content, items: newItems } });
-                                              } catch (err) { alert('Erro ao enviar arquivo'); }
+                                              } catch (err) { alert('Erro: ' + (err instanceof Error ? err.message : String(err))); }
                                             }} />
                                           </label>
                                         </div>
@@ -1981,7 +1981,7 @@ const AdminFunnels: React.FC = () => {
                                             const res = await adminUploadFile(file);
                                             updateCheckoutReview(idx, { avatarUrl: res.url });
                                           } catch (err) {
-                                            alert('Erro ao enviar arquivo');
+                                            alert('Erro: ' + (err instanceof Error ? err.message : String(err)));
                                           }
                                         }}
                                       />

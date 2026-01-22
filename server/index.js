@@ -591,6 +591,59 @@ app.post('/api/upload', authRequired, upload.single('file'), async (req, res) =>
   res.json({ url });
 });
 
+app.get('/api/debug/storage-check', async (_req, res) => {
+  const results = {
+    env: {
+      hasUrl: !!process.env.SUPABASE_URL,
+      hasKey: !!process.env.SUPABASE_KEY,
+      bucket: process.env.SUPABASE_BUCKET || 'uploads'
+    },
+    connection: null,
+    bucketExists: null,
+    uploadTest: null
+  };
+
+  if (!supabase) {
+    return res.json({ ...results, status: 'Using Local Storage (No Supabase)' });
+  }
+
+  try {
+    // 1. Test Connection & List Buckets
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    if (listError) {
+      results.connection = { success: false, error: listError.message, details: listError };
+    } else {
+      results.connection = { success: true, buckets: buckets.map(b => b.name) };
+      const bucket = buckets.find(b => b.name === results.env.bucket);
+      results.bucketExists = !!bucket;
+      
+      if (!bucket) {
+         results.error = `Bucket '${results.env.bucket}' not found in Supabase. Available: ${buckets.map(b => b.name).join(', ')}`;
+      }
+    }
+
+    // 2. Test Upload (only if bucket exists)
+    if (results.bucketExists) {
+      const testFileName = `debug-${Date.now()}.txt`;
+      const { error: uploadError } = await supabase.storage
+        .from(results.env.bucket)
+        .upload(testFileName, 'Debug upload test', { upsert: true });
+      
+      if (uploadError) {
+        results.uploadTest = { success: false, error: uploadError.message, details: uploadError };
+      } else {
+        results.uploadTest = { success: true, message: 'Write permission OK' };
+        // Cleanup
+        await supabase.storage.from(results.env.bucket).remove([testFileName]);
+      }
+    }
+
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ error: 'Unexpected error', details: err.message, stack: err.stack });
+  }
+});
+
 // --- User Management ---
 
 app.get('/api/admin/users', authRequired, adminRequired, async (_req, res) => {
