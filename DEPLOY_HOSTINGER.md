@@ -1,74 +1,70 @@
-# Guia de Deploy: Hostinger (Frontend) + Render (Backend)
+# Guia de Deploy: Hostinger (Frontend) + Backend (Railway ou Render)
 
-Como sua hospedagem na Hostinger não suporta Node.js (criação de Apps), você precisará separar o projeto em duas partes:
-
-1.  **Backend (API)**: Ficará no **Render.com** (Plano Gratuito).
-2.  **Frontend (Site)**: Ficará na **Hostinger** (como arquivos estáticos).
-
----
-
-## Parte 1: Subir o Backend no Render (Grátis)
-
-O Render vai hospedar a "inteligência" do seu site (login, salvar funis, etc).
-
-1.  Crie uma conta no [Render.com](https://render.com).
-2.  Suba seu código para o **GitHub** (se ainda não estiver).
-3.  No painel do Render, clique em **New +** -> **Web Service**.
-4.  Conecte seu repositório do GitHub.
-5.  Configure da seguinte forma:
-    *   **Name**: `api-jornada-fertilidade` (ou o que preferir)
-    *   **Region**: Escolha a mais próxima (ex: Ohio ou Frankfurt)
-    *   **Branch**: `main`
-    *   **Root Directory**: Deixe em branco
-    *   **Runtime**: `Node`
-    *   **Build Command**: `npm install`
-    *   **Start Command**: `node server/index.js`
-    *   **Plan**: Free
-6.  Role para baixo até **Environment Variables** e adicione:
-    *   `Key`: `CORS_ORIGIN`
-    *   `Value`: `*`  (Isso permite que seu site na Hostinger acesse a API)
-    *   `Key`: `JWT_SECRET`
-    *   `Value`: `crie-uma-senha-secreta-bem-longa-aqui`
-7.  Clique em **Create Web Service**.
-8.  Aguarde o deploy finalizar. O Render vai te dar uma URL (ex: `https://api-jornada.onrender.com`). **Copie essa URL.**
-
-**⚠️ Importante sobre o Plano Gratuito do Render:**
-O sistema de arquivos do plano gratuito é temporário. Se o servidor reiniciar (o que acontece quando fica inativo), os dados salvos localmente (`db.json` e uploads) podem ser perdidos. Para um projeto sério/comercial, recomenda-se usar um banco de dados externo (como MongoDB Atlas) ou pagar o plano "Starter" do Render ($7/mês) e adicionar um "Disk".
+Este projeto foi configurado para rodar com o Frontend e Backend separados.
+- **Frontend (Site):** Será hospedado na Hostinger.
+- **Backend (API):** Pode ser hospedado na Railway (Recomendado) ou Render.
 
 ---
 
-## Parte 2: Configurar e Buildar o Frontend
+## Opção 1: Backend na Railway (Recomendado)
+A Railway é excelente, não tem "Cold Start" (o servidor não dorme) e é muito fácil de configurar.
 
-Agora vamos preparar o site para conectar nesse Backend que você acabou de criar.
-
-1.  No seu computador, crie um arquivo chamado `.env.production` na raiz do projeto.
-2.  Adicione o seguinte conteúdo (cole a URL do Render que você copiou):
-
-    ```env
-    VITE_API_URL=https://api-jornada.onrender.com
-    ```
-    *(Não coloque a barra `/` no final)*
-
-3.  Abra o terminal no VS Code e rode:
-
-    ```bash
-    npm run build
-    ```
-
-4.  Isso vai criar uma pasta `dist` com a versão otimizada do seu site.
+1. Crie uma conta em [railway.app](https://railway.app).
+2. Clique em **New Project** > **Deploy from GitHub repo**.
+3. Selecione o repositório `vuxfunells`.
+4. A Railway vai detectar automaticamente o projeto Node.js.
+5. Vá na aba **Variables** e adicione:
+   - `PORT`: `4000` (ou deixe vazio que a Railway define, mas o padrão do código é 4000)
+   - `JWT_SECRET`: (crie uma senha segura)
+   - `ADMIN_PASSWORD`: (senha para entrar no painel admin)
+   - `CORS_ORIGIN`: `*` (ou o domínio do seu site na Hostinger)
+6. Vá na aba **Settings** > **Networking** e gere um domínio público (Generate Domain).
+   - Copie esse domínio (ex: `https://vuxfunells-production.up.railway.app`).
 
 ---
 
-## Parte 3: Subir na Hostinger
+## Opção 2: Backend no Render (Gratuito)
+O Render tem um plano gratuito, mas o servidor "dorme" após 15 minutos de inatividade (o primeiro acesso demora ~50 segundos).
 
-1.  Acesse o Gerenciador de Arquivos da Hostinger.
-2.  Entre na pasta `public_html`.
-3.  Delete os arquivos padrão se houver (index.php, default.php).
-4.  Faça o upload de **todo o conteúdo de DENTRO da pasta `dist`** (não a pasta dist em si, mas os arquivos que estão dentro dela: `index.html`, pasta `assets`, etc).
-5.  Pronto! Acesse seu domínio na Hostinger.
+1. Crie uma conta em [render.com](https://render.com).
+2. Clique em **New +** -> **Web Service**.
+3. Conecte seu GitHub e escolha o repositório.
+4. Configure:
+   - **Runtime**: Node
+   - **Build Command**: `npm install`
+   - **Start Command**: `node server/index.js`
+5. Em "Environment Variables", adicione:
+   - `CORS_ORIGIN`: `*`
+   - `JWT_SECRET`: (sua senha segura)
+   - `ADMIN_PASSWORD`: (sua senha admin)
+6. Clique em **Create Web Service**.
+7. Copie a URL gerada.
 
 ---
 
-### Resumo
-*   O site (Frontend) carrega da Hostinger.
-*   Quando você faz login ou salva um funil, ele manda os dados para o Render (Backend).
+## Passo 2: Configurar e Buildar o Frontend (Para Hostinger)
+
+Agora que você tem a URL do seu backend (Railway ou Render), vamos configurar o frontend.
+
+1. No seu computador, abra o arquivo `.env.production` (crie se não existir) na raiz do projeto.
+2. Adicione a URL do seu backend:
+   ```env
+   VITE_API_URL=https://sua-url-do-backend.app
+   ```
+   *(Não coloque a barra `/` no final)*
+
+3. Rode o comando de build no terminal:
+   ```bash
+   npm run build
+   ```
+
+## Passo 3: Enviar para Hostinger
+
+1. Vá no **Gerenciador de Arquivos** da Hostinger.
+2. Entre na pasta `public_html`.
+3. Apague qualquer arquivo padrão que estiver lá.
+4. **Envie todo o conteúdo** de dentro da pasta `dist` (gerada no passo anterior) para dentro da `public_html`.
+   - Você deve ver arquivos como `index.html`, `.htaccess` e uma pasta `assets` direto na `public_html`.
+   - **IMPORTANTE:** O arquivo `.htaccess` é fundamental para que o link `/admin` funcione. Certifique-se de enviá-lo. (Se ele estiver oculto no seu computador, ative a opção de ver arquivos ocultos).
+
+Pronto! Acesse seu domínio na Hostinger. O site vai carregar e o painel admin também deve funcionar.
