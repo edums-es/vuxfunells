@@ -53,7 +53,10 @@ const storage = supabase
       }
     });
 
-const upload = multer({ storage });
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 500 * 1024 * 1024 } // 500MB limit
+});
 
 const PORT = Number(process.env.PORT || 4000);
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
@@ -135,7 +138,7 @@ const limiter = rateLimit({
 // Apply rate limiting to all requests
 app.use('/api/', limiter);
 
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '50mb' }));
 app.use(
   cors({
     origin: CORS_ORIGIN === '*' ? true : CORS_ORIGIN.split(',').map((s) => s.trim()),

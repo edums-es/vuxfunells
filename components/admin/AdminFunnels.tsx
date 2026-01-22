@@ -1010,7 +1010,8 @@ const AdminFunnels: React.FC = () => {
                               const res = await adminUploadFile(file);
                               updateDoctor({ wallpaperUrl: res.url });
                             } catch (err) {
-                              alert('Erro ao enviar arquivo');
+                              console.error(err);
+                              alert(`Erro ao enviar arquivo: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
                             }
                           }} 
                         />
@@ -1175,7 +1176,8 @@ const AdminFunnels: React.FC = () => {
                                                   const res = await adminUploadFile(file);
                                                   updateChatMessage(part, idx, { mediaUrl: res.url });
                                                 } catch (err) {
-                                                  alert('Erro ao enviar arquivo');
+                                                  console.error(err);
+                                                  alert(`Erro ao enviar arquivo: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
                                                 }
                                               }}
                                             />
