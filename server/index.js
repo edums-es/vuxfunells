@@ -581,7 +581,8 @@ app.post('/api/upload', authRequired, upload.single('file'), async (req, res) =>
       return res.json({ url: publicUrl });
     } catch (err) {
       console.error('Supabase Upload Error:', err);
-      return res.status(500).json({ error: 'upload_failed' });
+      // Return details to help debugging
+      return res.status(500).json({ error: 'upload_failed', details: err.message, stack: err.stack });
     }
   }
 
