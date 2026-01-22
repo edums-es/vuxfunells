@@ -17,7 +17,11 @@ import { DEFAULT_FUNNEL_DEFINITION } from './seed.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const uploadDir = path.join(__dirname, 'uploads');
+// Configuração de Persistência (Railway Volume)
+// Se houver a variável STORAGE_DIR, usa ela. Se não, usa a pasta local do servidor.
+const STORAGE_DIR = process.env.STORAGE_DIR || __dirname;
+
+const uploadDir = path.join(STORAGE_DIR, 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -40,7 +44,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 
 const db = createJsonStore({
-  filePath: path.join(__dirname, 'data', 'db.json'),
+  filePath: path.join(STORAGE_DIR, 'data', 'db.json'),
   initialData: {
     users: [],
     funnels: [

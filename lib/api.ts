@@ -62,9 +62,11 @@ export type OverviewMetrics = {
 };
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://vuxfunells-production.up.railway.app';
+console.log('[API] Using Base URL:', API_BASE);
 
 async function requestJson<T>(endpoint: string, init?: RequestInit): Promise<T> {
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
+  console.log('[API] Fetching:', url);
   const res = await fetch(url, {
     ...init,
     headers: {
@@ -76,6 +78,15 @@ async function requestJson<T>(endpoint: string, init?: RequestInit): Promise<T> 
     const text = await res.text().catch(() => '');
     throw new Error(text || `HTTP ${res.status}`);
   }
+  
+  // Check if response is HTML (common error when API URL is wrong and hitting frontend 404)
+  const contentType = res.headers.get('content-type');
+  if (contentType && contentType.includes('text/html')) {
+    const text = await res.text();
+    console.error('[API] Received HTML instead of JSON:', text.substring(0, 500));
+    throw new Error('A API retornou HTML em vez de JSON. Verifique a configuração da URL da API (CORS ou URL errada).');
+  }
+
   return (await res.json()) as T;
 }
 

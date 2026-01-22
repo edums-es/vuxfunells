@@ -18,7 +18,11 @@ A Railway é excelente, não tem "Cold Start" (o servidor não dorme) e é muito
    - `JWT_SECRET`: (crie uma senha segura)
    - `ADMIN_PASSWORD`: (senha para entrar no painel admin)
    - `CORS_ORIGIN`: `*` (ou o domínio do seu site na Hostinger)
-6. Vá na aba **Settings** > **Networking** e gere um domínio público (Generate Domain).
+   - `STORAGE_DIR`: `/app/storage` (IMPORTANTE para salvar dados)
+6. Vá na aba **Volumes** (ou clique no projeto e depois botão direito > Add Volume).
+   - Crie um volume e monte ele no caminho: `/app/storage`
+   - **ISSO É CRÍTICO:** Sem o volume, todos os dados (cadastros, funis e uploads) serão apagados toda vez que o servidor reiniciar.
+7. Vá na aba **Settings** > **Networking** e gere um domínio público (Generate Domain).
    - Copie esse domínio (ex: `https://vuxfunells-production.up.railway.app`).
 
 ---
