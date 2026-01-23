@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Settings, MessageSquare, Star, ShoppingCart, Tag, Plus, Trash2, ArrowUp, ArrowDown, Check, CheckCircle, ShieldCheck, HelpCircle, Code, AlertTriangle, X, ChevronRight, ChevronDown, Save, Play, Upload, Layout, Video, Image, Link, Mail, Sun, Moon, Smartphone, Monitor } from 'lucide-react';
+import { Settings, MessageSquare, Star, ShoppingCart, Tag, Plus, Trash2, ArrowUp, ArrowDown, Check, CheckCircle, ShieldCheck, HelpCircle, Code, AlertTriangle, X, ChevronRight, ChevronDown, Save, Play, Upload, Layout, Video, Image, Link, Mail, Sun, Moon, Smartphone, Monitor, Music } from 'lucide-react';
 import { adminCreateFunnel, adminListFunnels, adminUpdateFunnel, adminUploadFile, adminDeleteFunnel } from '../../lib/api';
 import type { AdminFunnel } from '../../lib/api';
 import type { ChatMessage, CheckoutConfig, FunnelDefinition, OfferConfig, ReviewData, CommentData, CheckoutBlock, VideoCallConfig, IntegrationsConfig, MarketingConfig } from '../../types';
@@ -17,11 +17,13 @@ function safeStringify(value: unknown) {
 }
 
 type EditorMode = 'builder' | 'json';
-type BuilderTab = 'doctor' | 'chat' | 'calls' | 'reviews' | 'checkout' | 'offers' | 'integrations' | 'marketing';
+type BuilderTab = 'doctor' | 'chat' | 'calls' | 'reviews' | 'checkout' | 'offers' | 'integrations' | 'marketing' | 'audio';
 
 function cloneDeep<T>(value: T): T {
   return structuredClone(value);
 }
+
+const noOp = () => {};
 
 const FunnelPreview: React.FC<{ def: FunnelDefinition; tab: BuilderTab; device?: 'mobile' | 'desktop' }> = ({ def, tab, device = 'mobile' }) => {
   const [key, setKey] = useState(0);
@@ -98,11 +100,12 @@ const FunnelPreview: React.FC<{ def: FunnelDefinition; tab: BuilderTab; device?:
                    key={`preview-chat-${key}`}
                    script={[...def.chat.part1, ...def.chat.part2]}
                    initialHistory={[]}
-                   onAction={() => {}}
-                   onHistoryUpdate={() => {}}
+                   onAction={noOp}
+                   onHistoryUpdate={noOp}
                    doctorName={def.doctor.name}
                    doctorAvatarUrl={def.doctor.avatarUrl}
                    startDelay={0}
+                   audioConfig={def.audio}
                 />
              )}
 
@@ -340,7 +343,8 @@ function ensureDefinition(def: any): FunnelDefinition {
       footerLines: def.checkout?.footerLines || [],
       blocks: (def.checkout?.blocks || []).map((b: any) => ({ ...b, content: b.content || {} }))
     },
-    offers: { ...base.offers, ...(def.offers || {}) }
+    offers: { ...base.offers, ...(def.offers || {}) },
+    audio: { ...base.audio, ...(def.audio || {}) }
   };
 }
 
@@ -500,6 +504,13 @@ const AdminFunnels: React.FC = () => {
       setDraftDef((prev) => {
         if (!prev) return prev;
         return { ...prev, doctor: { ...prev.doctor, ...patch } };
+      });
+    };
+
+    const updateAudio = (patch: Partial<FunnelDefinition['audio']>) => {
+      setDraftDef((prev) => {
+        if (!prev) return prev;
+        return { ...prev, audio: { ...(prev.audio || {}), ...patch } };
       });
     };
 
@@ -915,6 +926,7 @@ const AdminFunnels: React.FC = () => {
 
     const tabs: { id: BuilderTab; label: string; icon: React.ElementType }[] = [
       { id: 'doctor', label: 'Doutora', icon: Settings },
+      { id: 'audio', label: 'Áudio & Sons', icon: Music },
       { id: 'chat', label: 'Chat', icon: MessageSquare },
       { id: 'calls', label: 'Chamadas', icon: Video },
       { id: 'reviews', label: 'Reviews', icon: Star },
@@ -1048,6 +1060,73 @@ const AdminFunnels: React.FC = () => {
                        </button>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {tab === 'audio' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                   <div className="md:col-span-2">
+                     <h3 className="text-lg font-bold text-white mb-1">Configurações de Áudio e Sons</h3>
+                     <p className="text-neutral-400 text-sm">Personalize a experiência sonora do funil.</p>
+                   </div>
+                   
+                   <div className="md:col-span-2 p-4 bg-neutral-950/30 rounded-2xl border border-white/5 space-y-4">
+                      <div className="flex items-center gap-3 mb-2">
+                         <div className="p-2 bg-purple-500/10 rounded-lg text-purple-400"><Music className="w-5 h-5" /></div>
+                         <div>
+                            <h4 className="font-bold text-white">Música de Fundo</h4>
+                            <p className="text-xs text-neutral-400">Toca continuamente durante o chat</p>
+                         </div>
+                      </div>
+                      
+                      <FieldLabel label="URL da Música (MP3)" />
+                      <div className="flex gap-2">
+                         <TextInput 
+                           value={def.audio?.backgroundMusicUrl || ''} 
+                           onChange={(v) => updateAudio({ backgroundMusicUrl: v })} 
+                           placeholder="https://..." 
+                           className="flex-1"
+                         />
+                         <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
+                           <Upload className="w-4 h-4" />
+                           <input 
+                             type="file" 
+                             className="hidden" 
+                             accept="audio/*"
+                             onChange={async (e) => {
+                               const file = e.target.files?.[0];
+                               if (!file) return;
+                               try {
+                                 const res = await adminUploadFile(file);
+                                 updateAudio({ backgroundMusicUrl: res.url });
+                               } catch (err) {
+                                 alert('Erro ao enviar arquivo: ' + (err instanceof Error ? err.message : String(err)));
+                               }
+                             }} 
+                           />
+                         </label>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                         <div>
+                            <FieldLabel label="Volume (0.1 a 1.0)" />
+                            <NumberInput 
+                              value={def.audio?.backgroundMusicVolume ?? 0.1} 
+                              onChange={(v) => updateAudio({ backgroundMusicVolume: v })} 
+                              min={0} 
+                              max={1} 
+                              step={0.1} 
+                            />
+                         </div>
+                         <div className="flex items-end pb-2">
+                            <Toggle 
+                              checked={def.audio?.messageSoundEnabled ?? true} 
+                              onChange={(v) => updateAudio({ messageSoundEnabled: v })} 
+                              label="Sons de Mensagem" 
+                            />
+                         </div>
+                      </div>
+                   </div>
                 </div>
               )}
 
@@ -1199,9 +1278,19 @@ const AdminFunnels: React.FC = () => {
                                       </div>
 
                                       <div>
-                                         <FieldLabel label={m.type === 'audio' ? "Duração (ex: 0:42)" : "Texto Alternativo / Descrição"} />
+                                         <FieldLabel label={m.type === 'audio' ? "Duração (ex: 0:42)" : m.type === 'image' ? "Legenda (Opcional)" : "Texto Alternativo / Descrição"} />
                                          <TextInput value={m.content} onChange={(v) => updateChatMessage(part, idx, { content: v })} />
                                       </div>
+                                      
+                                      {m.type === 'video' && (
+                                        <div className="pt-2">
+                                          <Toggle
+                                            checked={Boolean(m.forceVideo)}
+                                            onChange={(checked) => updateChatMessage(part, idx, { forceVideo: checked || undefined })}
+                                            label="Vídeo Forçado (Impede pular)"
+                                          />
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </div>
@@ -1212,6 +1301,48 @@ const AdminFunnels: React.FC = () => {
                                     label="Pausar e aguardar resposta da usuária"
                                   />
                                 </div>
+
+                                {m.sender === 'doctor' && (
+                                  <div className="md:col-span-12 p-4 bg-neutral-900/50 rounded-xl border border-white/5 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                       <FieldLabel label="Respostas Rápidas (Botões)" />
+                                       <button 
+                                          onClick={() => {
+                                            const current = m.quickReplies || [];
+                                            updateChatMessage(part, idx, { quickReplies: [...current, { label: 'Nova Opção', value: 'Nova Opção' }] });
+                                          }}
+                                          className="text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                                       >
+                                          <Plus className="w-3 h-3" /> Adicionar Botão
+                                       </button>
+                                    </div>
+                                    
+                                    {(m.quickReplies || []).map((qr, qrIdx) => (
+                                       <div key={qrIdx} className="flex gap-2 items-center">
+                                          <TextInput 
+                                            value={qr.label} 
+                                            onChange={(v) => {
+                                              const current = [...(m.quickReplies || [])];
+                                              current[qrIdx] = { ...current[qrIdx], label: v, value: v }; // Sync value by default
+                                              updateChatMessage(part, idx, { quickReplies: current });
+                                            }}
+                                            placeholder="Texto do botão"
+                                            className="flex-1"
+                                          />
+                                          <button 
+                                            onClick={() => {
+                                              const current = [...(m.quickReplies || [])];
+                                              current.splice(qrIdx, 1);
+                                              updateChatMessage(part, idx, { quickReplies: current });
+                                            }}
+                                            className="p-2 hover:bg-red-500/20 rounded-lg text-red-400"
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </button>
+                                       </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -1236,6 +1367,14 @@ const AdminFunnels: React.FC = () => {
                         <p className="text-neutral-400 text-sm">Configure o visual e som da chamada chegando.</p>
                      </div>
                      <div className="bg-neutral-950/50 border border-white/5 rounded-2xl p-6">
+                        <div className="mb-6">
+                           <Toggle 
+                             checked={def.incomingCall?.skipCallScreen || false}
+                             onChange={(v) => updateIncomingCall({ skipCallScreen: v })}
+                             label="Pular tela de recebimento (Ir direto para vídeo)"
+                           />
+                        </div>
+
                         <FieldLabel label="Áudio do Toque (Ringtone)" hint="Som que toca enquanto chama" />
                         <div className="flex gap-2">
                            <TextInput 

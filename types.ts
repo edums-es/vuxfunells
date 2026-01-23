@@ -21,6 +21,20 @@ export interface ChatMessage {
   mediaUrl?: string; // URL for audio/image/video file
   requiresInput?: boolean; // If true, pauses script until user types and sends
   action?: 'open_video' | 'open_reviews' | 'skip_video'; // Special triggers
+  quickReplies?: QuickReply[];
+  forceVideo?: boolean;
+}
+
+export interface QuickReply {
+  label: string;
+  value: string;
+}
+
+export interface AudioConfig {
+  backgroundMusicUrl?: string;
+  backgroundMusicVolume?: number;
+  messageSoundEnabled?: boolean;
+  loop?: boolean;
 }
 
 export interface ReviewData {
@@ -155,6 +169,7 @@ export interface FunnelDefinition {
     ringtoneUrl?: string; // Custom ringtone
     voiceUrl?: string; // Audio to play when answered
     autoStartVideo?: boolean;
+    skipCallScreen?: boolean; // If true, jumps directly to video call
   };
   reviews: {
     items: ReviewData[];
@@ -167,6 +182,7 @@ export interface FunnelDefinition {
   integrations?: IntegrationsConfig;
   marketing?: MarketingConfig;
   theme?: 'dark' | 'light';
+  audio?: AudioConfig;
 }
 
 export interface PublicFunnelResponse {

@@ -213,6 +213,17 @@ const FunnelExperience: React.FC = () => {
   const videoCallConfig = definition?.videoCall;
   const incomingCallConfig = definition?.incomingCall;
 
+  // Handle skipCallScreen logic
+  useEffect(() => {
+    if (currentStep === ScreenStep.INCOMING_CALL && incomingCallConfig?.skipCallScreen) {
+        if (incomingCallConfig.autoStartVideo) {
+            handleStepTransition(ScreenStep.VIDEO_CALL);
+        } else {
+            handleStepTransition(ScreenStep.LOCK_SCREEN);
+        }
+    }
+  }, [currentStep, incomingCallConfig, handleStepTransition]);
+
   useEffect(() => {
     if (currentStep === ScreenStep.UPSELL) {
       if (!offerPointer || offerPointer.kind !== 'upsell' || !upsells[offerPointer.index]) {

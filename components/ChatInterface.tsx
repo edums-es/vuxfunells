@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Video, Phone, Send, Mic, Plus, Play, Pause, Camera } from 'lucide-react';
-import { ChatMessage } from '../types';
+import { ChatMessage, AudioConfig } from '../types';
 import StatusBar from './StatusBar';
 import { cn } from '../lib/utils';
 
@@ -14,6 +14,7 @@ interface ChatInterfaceProps {
   doctorAvatarUrl: string;
   onUserMessage?: (text: string) => void;
   theme?: 'dark' | 'light';
+  audioConfig?: AudioConfig;
 }
 
 const AudioMessage: React.FC<{ duration: string; avatarUrl: string; audioUrl?: string }> = ({ duration, avatarUrl, audioUrl }) => {
@@ -91,19 +92,21 @@ const formatTime = (seconds: number) => {
 };
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ 
-  script, 
+  script = [], 
   onAction, 
   startDelay = 0, 
-  initialHistory, 
+  initialHistory = [], 
   onHistoryUpdate, 
   doctorName, 
   doctorAvatarUrl, 
   onUserMessage,
-  theme = 'light'
+  theme = 'light',
+  audioConfig
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>(initialHistory);
   
   const [currentIndex, setCurrentIndex] = useState(() => {
+    if (!script || script.length === 0) return 0;
     const firstUnplayedIndex = script.findIndex(scriptMsg => 
       !initialHistory.some(historyMsg => historyMsg.id === scriptMsg.id)
     );
@@ -112,14 +115,75 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   
   const [typingActivity, setTypingActivity] = useState<'text' | 'audio' | null>(null);
   const [inputValue, setInputValue] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Sound Effects
+  useEffect(() => {
+    if (audioConfig?.backgroundMusicUrl) {
+      const bgAudio = new Audio(audioConfig.backgroundMusicUrl);
+      bgAudio.loop = audioConfig.loop ?? true;
+      bgAudio.volume = audioConfig.backgroundMusicVolume ?? 0.1;
+      const playPromise = bgAudio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.log("Auto-play was prevented", error);
+        });
+      }
+      
+      return () => {
+        bgAudio.pause();
+        bgAudio.currentTime = 0;
+      };
+    }
+  }, [audioConfig?.backgroundMusicUrl, audioConfig?.backgroundMusicVolume, audioConfig?.loop]);
+
+  const playMessageSound = (type: 'sent' | 'received') => {
+    // Vibration
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+       navigator.vibrate(200);
+    }
+
+    if (audioConfig?.messageSoundEnabled) {
+       const soundUrl = type === 'sent' 
+         ? 'https://cdn.pixabay.com/download/audio/2022/03/24/audio_c8c8a73467.mp3' // Pop sound
+         : 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_736a5124b6.mp3'; // Notification sound
+       const audio = new Audio(soundUrl);
+       audio.volume = 0.5;
+       audio.play().catch(() => {});
+    }
+  };
+
+  const prevMessagesLength = useRef(messages.length);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
   };
 
   useEffect(() => {
-    scrollToBottom();
+    // Sync existing messages with updated script content (live preview)
+    setMessages(prev => {
+        let hasChanges = false;
+        const newMsgs = prev.map(m => {
+            const s = script.find(sm => sm.id === m.id);
+            if (s && (s.content !== m.content || s.mediaUrl !== m.mediaUrl || s.forceVideo !== m.forceVideo || JSON.stringify(s.quickReplies) !== JSON.stringify(m.quickReplies))) {
+                hasChanges = true;
+                return { ...m, ...s };
+            }
+            return m;
+        });
+        return hasChanges ? newMsgs : prev;
+    });
+  }, [script]);
+
+  useEffect(() => {
+    if (messages.length > prevMessagesLength.current) {
+        scrollToBottom();
+    }
+    prevMessagesLength.current = messages.length;
+
     const timer = setTimeout(() => {
         onHistoryUpdate(messages);
     }, 0);
@@ -148,6 +212,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                setTypingActivity(null);
                setMessages(prev => {
                    if (prev.find(m => m.id === msg.id)) return prev;
+                   playMessageSound('received');
                    return [...prev, msg];
                });
                
@@ -174,18 +239,20 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   }, [currentIndex, script, startDelay, onAction]); 
 
-  const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
+  const handleSendMessage = (textOverride?: string) => {
+    const text = textOverride || inputValue;
+    if (!text.trim()) return;
 
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
-      content: inputValue,
+      content: text,
       sender: 'user',
       type: 'text',
       delay: 0
     };
 
-    onUserMessage?.(inputValue);
+    onUserMessage?.(text);
+    playMessageSound('sent');
     setMessages(prev => [...prev, userMsg]);
     setInputValue('');
     
@@ -271,7 +338,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>
 
       {/* Chat Area - Added scrollbar-hide class */}
-      <div className={cn(
+      <div 
+        ref={chatContainerRef}
+        className={cn(
         "flex-1 overflow-y-auto p-4 space-y-3 relative scrollbar-hide transition-colors",
         theme === 'dark' ? "bg-neutral-950" : "bg-[url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')] bg-repeat"
       )}>
@@ -287,10 +356,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </div>
         )}
 
-        {messages.map((msg) => (
+        {messages.map((msg, idx) => (
           <div 
             key={msg.id} 
-            className={`flex w-full animate-in slide-in-from-bottom-2 duration-300 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex flex-col w-full animate-in slide-in-from-bottom-2 duration-300 ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
           >
             <div 
               className={cn(
@@ -302,6 +371,32 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             >
               {msg.type === 'audio' ? (
                 <AudioMessage duration={msg.content} avatarUrl={doctorAvatarUrl} audioUrl={msg.mediaUrl} />
+              ) : msg.type === 'image' ? (
+                <div className="flex flex-col gap-2">
+                  <div className="rounded-lg overflow-hidden max-h-[300px]">
+                     <img src={msg.mediaUrl} alt="Imagem" className="w-full h-full object-cover" />
+                  </div>
+                  {msg.content && <p className="whitespace-pre-wrap">{msg.content}</p>}
+                </div>
+              ) : msg.type === 'video' ? (
+                <div className="flex flex-col gap-2">
+                  <div className="rounded-lg overflow-hidden max-h-[300px]">
+                     <video 
+                       src={msg.mediaUrl} 
+                       className="w-full h-full object-cover" 
+                       controls={!msg.forceVideo} 
+                       playsInline
+                       onContextMenu={(e) => e.preventDefault()}
+                       onClick={(e) => {
+                         if (msg.forceVideo) {
+                           const v = e.currentTarget;
+                           v.paused ? v.play() : v.pause();
+                         }
+                       }}
+                     />
+                  </div>
+                  {msg.content && <p className="whitespace-pre-wrap">{msg.content}</p>}
+                </div>
               ) : (
                 <p className="whitespace-pre-wrap">{msg.content}</p>
               )}
@@ -313,33 +408,23 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 {new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}
               </span>
             </div>
+            
+            {/* Quick Replies */}
+            {msg.sender === 'doctor' && msg.quickReplies && msg.quickReplies.length > 0 && idx === messages.length - 1 && (
+              <div className="flex flex-wrap gap-2 mt-2 ml-2">
+                {msg.quickReplies.map((reply, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleSendMessage(reply.value)}
+                    className="bg-[#007AFF] text-white px-4 py-2 rounded-full text-sm font-semibold shadow-sm hover:bg-blue-600 transition-colors active:scale-95"
+                  >
+                    {reply.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ))}
-
-        {/* Dynamic Typing Indicator Bubble */}
-        {typingActivity && (
-          <div className="flex w-full justify-start animate-in fade-in duration-200">
-            <div className={cn(
-              "rounded-[18px] rounded-tl-none px-4 py-3 shadow-sm flex items-center gap-1 w-16 h-10 transition-colors",
-              theme === 'dark' ? "bg-[#202c33]" : "bg-white"
-            )}>
-               {typingActivity === 'audio' ? (
-                   <div className="flex items-center gap-1">
-                       <Mic className="w-4 h-4 text-gray-400 animate-pulse" />
-                       <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-100"></div>
-                       <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-200"></div>
-                   </div>
-               ) : (
-                   <>
-                       <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-0"></div>
-                       <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></div>
-                       <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-300"></div>
-                   </>
-               )}
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}

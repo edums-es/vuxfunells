@@ -11,8 +11,29 @@ export function createJsonStore({ filePath, initialData }) {
     await fs.mkdir(dirPath, { recursive: true });
     try {
       const raw = await fs.readFile(filePath, 'utf8');
-      data = JSON.parse(raw);
+      if (!raw || raw.trim() === '') {
+        data = structuredClone(initialData);
+      } else {
+        data = JSON.parse(raw);
+        // Validate basic structure
+        if (!data || typeof data !== 'object') {
+           data = structuredClone(initialData);
+        }
+        // Ensure all initial keys exist
+        for (const key in initialData) {
+           const expected = initialData[key];
+           const actual = data[key];
+           
+           if (!(key in data)) {
+              data[key] = structuredClone(expected);
+           } else if (Array.isArray(expected) && !Array.isArray(actual)) {
+              // Fix: If expected is array but actual is not (e.g. null/object), reset it to prevent crashes
+              data[key] = structuredClone(expected);
+           }
+        }
+      }
     } catch (err) {
+      console.warn(`[Storage] Failed to load DB from ${filePath}, resetting to defaults. Error: ${err.message}`);
       data = structuredClone(initialData);
       await flush();
     }

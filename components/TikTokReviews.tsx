@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Heart, MessageCircle, Share2, Music2, Plus, X, Play } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Music2, Plus, X, Play, Volume2, VolumeX } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { ReviewData, CommentData } from '../types';
 import StatusBar from './StatusBar';
@@ -10,16 +10,34 @@ interface TikTokReviewsProps {
   theme?: 'light' | 'dark';
 }
 
-const TikTokReviews: React.FC<TikTokReviewsProps> = ({ reviews, onFinish, theme = 'dark' }) => {
+const TikTokReviews: React.FC<TikTokReviewsProps> = ({ reviews = [], onFinish, theme = 'dark' }) => {
   const [activeReviewId, setActiveReviewId] = useState(0);
   const [liked, setLiked] = useState<Record<number, boolean>>({});
   const [likesCount, setLikesCount] = useState<Record<number, number>>({});
   const [showComments, setShowComments] = useState(false);
-  const [currentComments, setCurrentComments] = useState<CommentData[] | undefined>(reviews[0]?.comments);
+  const [currentComments, setCurrentComments] = useState<CommentData[] | undefined>(reviews?.[0]?.comments);
   const [videoError, setVideoError] = useState<Record<number, boolean>>({});
   const [showPlayButton, setShowPlayButton] = useState<Record<number, boolean>>({});
+  const [isMuted, setIsMuted] = useState(true);
 
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+
+  // Safety check for empty reviews
+  if (!reviews || reviews.length === 0) {
+    return (
+      <div className={cn(
+        "h-full w-full relative font-sans flex items-center justify-center",
+        theme === 'dark' ? "bg-black text-white" : "bg-white text-gray-900"
+      )}>
+        <StatusBar theme={theme === 'dark' ? 'dark' : 'light'} />
+        <div className="text-center p-6 opacity-50">
+           <MessageCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
+           <p className="text-sm">Nenhum review configurado.</p>
+           <p className="text-xs mt-1">Adicione reviews no painel para visualizar.</p>
+        </div>
+      </div>
+    );
+  }
 
   // Update comments when slide changes
   useEffect(() => {
@@ -46,10 +64,23 @@ const TikTokReviews: React.FC<TikTokReviewsProps> = ({ reviews, onFinish, theme 
   const handleManualPlay = (index: number) => {
       const video = videoRefs.current[index];
       if (video) {
-          video.play();
-          setShowPlayButton(prev => ({ ...prev, [index]: false }));
-          setVideoError(prev => ({ ...prev, [index]: false }));
+          if (video.paused) {
+              video.play();
+              setShowPlayButton(prev => ({ ...prev, [index]: false }));
+              setVideoError(prev => ({ ...prev, [index]: false }));
+          } else {
+              video.pause();
+              setShowPlayButton(prev => ({ ...prev, [index]: true }));
+          }
       }
+  };
+
+  const toggleMute = () => {
+      const newState = !isMuted;
+      setIsMuted(newState);
+      videoRefs.current.forEach(video => {
+          if (video) video.muted = newState;
+      });
   };
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -112,7 +143,7 @@ const TikTokReviews: React.FC<TikTokReviewsProps> = ({ reviews, onFinish, theme 
                   className="w-full h-full object-cover"
                   loop
                   playsInline
-                  muted={false} // Try with sound
+                  muted={isMuted}
                   onError={() => setVideoError(prev => ({ ...prev, [index]: true }))}
                />
                
@@ -131,15 +162,16 @@ const TikTokReviews: React.FC<TikTokReviewsProps> = ({ reviews, onFinish, theme 
 
                {/* Play Button Overlay */}
                {!videoError[index] && showPlayButton[index] && (
-                   <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/30">
-                       <button 
-                           onClick={() => handleManualPlay(index)}
-                           className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white/30 transition-all"
-                       >
-                           <Play className="w-8 h-8 text-white fill-current ml-1" />
-                       </button>
+                   <div 
+                       className="absolute inset-0 flex items-center justify-center z-20 bg-black/20"
+                       onClick={() => handleManualPlay(index)}
+                   >
+                       <Play className="w-16 h-16 text-white/80 fill-white/80 animate-pulse" />
                    </div>
                )}
+
+               {/* Click to Pause/Play Area */}
+               <div className="absolute inset-0 z-10" onClick={() => handleManualPlay(index)}></div>
 
                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60 pointer-events-none"></div>
             </div>
@@ -174,6 +206,15 @@ const TikTokReviews: React.FC<TikTokReviewsProps> = ({ reviews, onFinish, theme 
                  <span className="text-[12px] font-semibold drop-shadow-md">Share</span>
                </div>
 
+               {/* Mute Toggle */}
+               <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={toggleMute}>
+                 {isMuted ? (
+                    <VolumeX className="w-[34px] h-[34px] text-white drop-shadow-md" />
+                 ) : (
+                    <Volume2 className="w-[34px] h-[34px] text-white drop-shadow-md" />
+                 )}
+               </div>
+
                {/* Spinning Disc */}
                <div className="mt-4 relative">
                   <div className="w-[50px] h-[50px] bg-[#222] rounded-full border-[8px] border-[#111] flex items-center justify-center animate-spin-slow overflow-hidden">
@@ -189,21 +230,19 @@ const TikTokReviews: React.FC<TikTokReviewsProps> = ({ reviews, onFinish, theme 
                </div>
             </div>
 
-            {/* Bottom Content */}
-            <div className="absolute bottom-0 w-full px-4 pb-6 z-10 bg-gradient-to-t from-black/50 to-transparent">
-               <h3 className="font-bold text-[17px] mb-1 text-white drop-shadow-sm">@{review.name.replace(' ', '_').toLowerCase()}</h3>
-               
-               <p className="text-[15px] leading-snug mb-3 pr-16 drop-shadow-md font-light">
-                 {review.text} <br/>
-                 <span className="font-bold">#fertilidade #positivo #draana</span>
-               </p>
-               
-               <div className="flex items-center gap-2 mb-4 w-2/3 overflow-hidden">
-                  <Music2 className="w-3 h-3" />
-                  <div className="text-[14px] font-medium whitespace-nowrap animate-marquee">
-                     Som original - {review.name} - Dra. Ana Fertilidade Oficial
-                  </div>
-               </div>
+            {/* Overlay Content */}
+            <div className="absolute bottom-0 left-0 w-full p-4 pb-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent">
+                <div className="flex items-end justify-between">
+                    <div className="flex-1 mr-12">
+                        <h3 className="font-bold text-lg mb-1 drop-shadow-md">@{review.name.replace(/\s+/g, '').toLowerCase()}</h3>
+                        <p className="text-base leading-snug drop-shadow-md opacity-90">{review.text}</p>
+                        
+                        <div className="flex items-center gap-2 mt-2 text-xs font-semibold">
+                            <Music2 className="w-3 h-3" />
+                            <span>Som original - {review.name}</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Last Slide Button Overlay */}

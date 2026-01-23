@@ -151,46 +151,62 @@ app.use('/uploads', express.static(uploadDir));
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
 app.post('/api/admin/auth/login', async (req, res) => {
-  const schema = z.object({ email: z.string().min(3), password: z.string().min(1) });
-  const parsed = schema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: 'invalid_body' });
+  try {
+    const schema = z.object({ email: z.string().min(3), password: z.string().min(1) });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'invalid_body' });
 
-  const { email, password } = parsed.data;
-  const data = await db.read();
-  const user = data.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-  if (!user) return res.status(401).json({ error: 'invalid_credentials' });
+    const { email, password } = parsed.data;
+    const data = await db.read();
+    const user = data.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    if (!user) return res.status(401).json({ error: 'invalid_credentials' });
 
-  const ok = await bcrypt.compare(password, user.passwordHash);
-  if (!ok) return res.status(401).json({ error: 'invalid_credentials' });
+    const ok = await bcrypt.compare(password, user.passwordHash);
+    if (!ok) return res.status(401).json({ error: 'invalid_credentials' });
 
-  const token = signToken(user);
-  res.json({
-    token,
-    user: { id: user.id, email: user.email, role: user.role }
-  });
+    const token = signToken(user);
+    res.json({
+      token,
+      user: { id: user.id, email: user.email, role: user.role }
+    });
+  } catch (err) {
+    console.error('Login Error:', err);
+    res.status(500).json({ error: 'internal_error' });
+  }
 });
 
 app.get('/api/admin/me', authRequired, async (req, res) => {
-  const data = await db.read();
-  const user = data.users.find((u) => u.id === req.auth.sub);
-  if (!user) return res.status(401).json({ error: 'unauthorized' });
-  res.json({ id: user.id, email: user.email, role: user.role });
+  try {
+    const data = await db.read();
+    const user = data.users.find((u) => u.id === req.auth.sub);
+    if (!user) return res.status(401).json({ error: 'unauthorized' });
+    res.json({ id: user.id, email: user.email, role: user.role });
+  } catch (err) {
+    console.error('Me Error:', err);
+    res.status(500).json({ error: 'internal_error' });
+  }
 });
 
 app.get('/api/public/funnel', async (_req, res) => {
-  // Prevent caching of the public funnel definition so updates are immediate
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.set('Pragma', 'no-cache');
-  res.set('Expires', '0');
+  try {
+    // Prevent caching of the public funnel definition so updates are immediate
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
 
-  const data = await db.read();
-  const active = data.funnels.find((f) => f.status === 'active') || data.funnels[0];
-  res.json({ id: active.id, version: active.version, name: active.name, definition: active.definition });
+    const data = await db.read();
+    const active = data.funnels.find((f) => f.status === 'active') || data.funnels[0];
+    res.json({ id: active.id, version: active.version, name: active.name, definition: active.definition });
+  } catch (err) {
+    console.error('Public Funnel Error:', err);
+    res.status(500).json({ error: 'internal_error' });
+  }
 });
 
 app.post('/api/public/events', async (req, res) => {
-  const schema = z.object({
-    visitorId: z.string().min(8),
+  try {
+    const schema = z.object({
+      visitorId: z.string().min(8),
     type: z.string().min(1),
     step: z.string().optional(),
     funnelId: z.string().optional(),
@@ -289,270 +305,340 @@ app.post('/api/public/events', async (req, res) => {
   })();
 
   res.json({ ok: true, leadId });
+  } catch (err) {
+    console.error('Events Error:', err);
+    res.status(500).json({ error: 'internal_error' });
+  }
 });
 
 app.post('/api/public/leads/contact', async (req, res) => {
-  const schema = z.object({
-    visitorId: z.string().min(8),
-    name: z.string().min(1).optional(),
-    email: z.string().email().optional(),
-    phone: z.string().min(6).optional()
-  });
-  const parsed = schema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: 'invalid_body' });
-  const { visitorId, name, email, phone } = parsed.data;
-  const nowIso = new Date().toISOString();
+  try {
+    const schema = z.object({
+      visitorId: z.string().min(8),
+      name: z.string().min(1).optional(),
+      email: z.string().email().optional(),
+      phone: z.string().min(6).optional()
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'invalid_body' });
+    const { visitorId, name, email, phone } = parsed.data;
+    const nowIso = new Date().toISOString();
 
-  await db.write(async (data) => {
-    const lead = data.leads.find((l) => l.visitorId === visitorId);
-    if (!lead) return;
-    if (typeof name === 'string') lead.name = name;
-    if (typeof email === 'string') lead.email = email;
-    if (typeof phone === 'string') lead.phone = phone;
-    lead.updatedAt = nowIso;
-  });
+    await db.write(async (data) => {
+      if (!Array.isArray(data.leads)) data.leads = [];
+      const lead = data.leads.find((l) => l.visitorId === visitorId);
+      if (!lead) return;
+      if (typeof name === 'string') lead.name = name;
+      if (typeof email === 'string') lead.email = email;
+      if (typeof phone === 'string') lead.phone = phone;
+      lead.updatedAt = nowIso;
+    });
 
-  res.json({ ok: true });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Contact Error:', err);
+    res.status(500).json({ error: 'internal_error' });
+  }
 });
 
 app.get('/api/admin/funnels', authRequired, adminRequired, async (_req, res) => {
-  const data = await db.read();
-  res.json({ funnels: data.funnels });
+  try {
+    const data = await db.read();
+    res.json({ funnels: Array.isArray(data?.funnels) ? data.funnels : [] });
+  } catch (err) {
+    console.error('Fetch Funnels Error:', err);
+    res.status(500).json({ error: 'failed_funnels' });
+  }
 });
 
 app.get('/api/admin/funnels/:id', authRequired, adminRequired, async (req, res) => {
-  const { id } = req.params;
-  const data = await db.read();
-  const funnel = data.funnels.find((f) => f.id === id);
-  if (!funnel) return res.status(404).json({ error: 'not_found' });
-  res.json({ funnel });
+  try {
+    const { id } = req.params;
+    const data = await db.read();
+    const funnels = Array.isArray(data?.funnels) ? data.funnels : [];
+    const funnel = funnels.find((f) => f.id === id);
+    if (!funnel) return res.status(404).json({ error: 'not_found' });
+    res.json({ funnel });
+  } catch (err) {
+    console.error('Fetch Funnel Error:', err);
+    res.status(500).json({ error: 'failed_funnel' });
+  }
 });
 
 app.post('/api/admin/funnels', authRequired, adminRequired, async (req, res) => {
-  const schema = z.object({
-    name: z.string().min(1),
-    definition: z.any().optional()
-  });
-  const parsed = schema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: 'invalid_body' });
-  const nowIso = new Date().toISOString();
+  try {
+    const schema = z.object({
+      name: z.string().min(1),
+      definition: z.any().optional()
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'invalid_body' });
+    const nowIso = new Date().toISOString();
 
-  const created = await db.write(async (data) => {
-    const funnel = {
-      id: nanoid(),
-      name: parsed.data.name,
-      status: 'draft',
-      version: 1,
-      createdAt: nowIso,
-      updatedAt: nowIso,
-      definition: parsed.data.definition || structuredClone(DEFAULT_FUNNEL_DEFINITION)
-    };
-    data.funnels.push(funnel);
-    return funnel;
-  });
+    const created = await db.write(async (data) => {
+      // Ensure funnels array exists
+      if (!Array.isArray(data.funnels)) data.funnels = [];
+      
+      const funnel = {
+        id: nanoid(),
+        name: parsed.data.name,
+        status: 'draft',
+        version: 1,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+        definition: parsed.data.definition || structuredClone(DEFAULT_FUNNEL_DEFINITION)
+      };
+      data.funnels.push(funnel);
+      return funnel;
+    });
 
-  res.json({ funnel: created });
+    res.json({ funnel: created });
+  } catch (err) {
+    console.error('Create Funnel Error:', err);
+    res.status(500).json({ error: 'internal_error' });
+  }
 });
 
 app.put('/api/admin/funnels/:id', authRequired, adminRequired, async (req, res) => {
-  const schema = z.object({
-    name: z.string().min(1).optional(),
-    status: z.enum(['draft', 'active']).optional(),
-    definition: z.any().optional()
-  });
-  const parsed = schema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: 'invalid_body' });
-  const { id } = req.params;
-  const nowIso = new Date().toISOString();
+  try {
+    const schema = z.object({
+      name: z.string().min(1).optional(),
+      status: z.enum(['draft', 'active']).optional(),
+      definition: z.any().optional()
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'invalid_body' });
+    const { id } = req.params;
+    const nowIso = new Date().toISOString();
 
-  let updated = null;
-  await db.write(async (data) => {
-    const funnel = data.funnels.find((f) => f.id === id);
-    if (!funnel) return;
-    if (typeof parsed.data.name === 'string') funnel.name = parsed.data.name;
-    if (typeof parsed.data.status === 'string') funnel.status = parsed.data.status;
-    if (parsed.data.definition) {
-      funnel.definition = parsed.data.definition;
-      funnel.version = Number(funnel.version || 0) + 1;
-    }
-    funnel.updatedAt = nowIso;
-    updated = funnel;
-    if (parsed.data.status === 'active') {
-      for (const other of data.funnels) {
-        if (other.id !== funnel.id && other.status === 'active') other.status = 'draft';
+    let updated = null;
+    await db.write(async (data) => {
+      if (!Array.isArray(data.funnels)) data.funnels = [];
+      const funnel = data.funnels.find((f) => f.id === id);
+      if (!funnel) return;
+      if (typeof parsed.data.name === 'string') funnel.name = parsed.data.name;
+      if (typeof parsed.data.status === 'string') funnel.status = parsed.data.status;
+      if (parsed.data.definition) {
+        funnel.definition = parsed.data.definition;
+        funnel.version = Number(funnel.version || 0) + 1;
       }
-    }
-  });
+      funnel.updatedAt = nowIso;
+      updated = funnel;
+      if (parsed.data.status === 'active') {
+        for (const other of data.funnels) {
+          if (other.id !== funnel.id && other.status === 'active') other.status = 'draft';
+        }
+      }
+    });
 
-  if (!updated) return res.status(404).json({ error: 'not_found' });
-  res.json({ funnel: updated });
+    if (!updated) return res.status(404).json({ error: 'not_found' });
+    res.json({ funnel: updated });
+  } catch (err) {
+    console.error('Update Funnel Error:', err);
+    res.status(500).json({ error: 'internal_error' });
+  }
 });
 
 app.delete('/api/admin/funnels/:id', authRequired, adminRequired, async (req, res) => {
-  const { id } = req.params;
-  let found = false;
-  await db.write(async (data) => {
-    const idx = data.funnels.findIndex((f) => f.id === id);
-    if (idx !== -1) {
-      data.funnels.splice(idx, 1);
-      found = true;
-    }
-  });
+  try {
+    const { id } = req.params;
+    let found = false;
+    await db.write(async (data) => {
+      if (!Array.isArray(data.funnels)) data.funnels = [];
+      const idx = data.funnels.findIndex((f) => f.id === id);
+      if (idx !== -1) {
+        data.funnels.splice(idx, 1);
+        found = true;
+      }
+    });
 
-  if (!found) return res.status(404).json({ error: 'not_found' });
-  res.json({ ok: true });
+    if (!found) return res.status(404).json({ error: 'not_found' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Delete Funnel Error:', err);
+    res.status(500).json({ error: 'internal_error' });
+  }
 });
 
 app.get('/api/admin/leads', authRequired, adminRequired, async (req, res) => {
-  const search = String(req.query.search || '').trim().toLowerCase();
-  const limit = Math.min(Number(req.query.limit || 100), 500);
-  const data = await db.read();
+  try {
+    const search = String(req.query.search || '').trim().toLowerCase();
+    const limit = Math.min(Number(req.query.limit || 100), 500);
+    const data = await db.read();
 
-  const rows = data.leads
-    .filter((l) => {
-      if (!search) return true;
-      return (
-        (l.email || '').toLowerCase().includes(search) ||
-        (l.phone || '').toLowerCase().includes(search) ||
-        (l.name || '').toLowerCase().includes(search) ||
-        (l.visitorId || '').toLowerCase().includes(search)
-      );
-    })
-    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
-    .slice(0, limit);
+    const leads = Array.isArray(data?.leads) ? data.leads : [];
+    const events = Array.isArray(data?.events) ? data.events : [];
 
-  const eventsByLead = new Map();
-  for (const e of data.events) {
-    if (!e.leadId) continue;
-    const list = eventsByLead.get(e.leadId) || [];
-    list.push(e);
-    eventsByLead.set(e.leadId, list);
+    const rows = leads
+      .filter((l) => {
+        if (!l) return false;
+        if (!search) return true;
+        return (
+          (l.email || '').toLowerCase().includes(search) ||
+          (l.phone || '').toLowerCase().includes(search) ||
+          (l.name || '').toLowerCase().includes(search) ||
+          (l.visitorId || '').toLowerCase().includes(search)
+        );
+      })
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+      .slice(0, limit);
+
+    const eventsByLead = new Map();
+    for (const e of events) {
+      if (!e || !e.leadId) continue;
+      const list = eventsByLead.get(e.leadId) || [];
+      list.push(e);
+      eventsByLead.set(e.leadId, list);
+    }
+
+    const enriched = rows.map((l) => {
+      const leadEvents = eventsByLead.get(l.id) || [];
+      const last = leadEvents.reduce((acc, e) => (acc && acc.ts > e.ts ? acc : e), null);
+      const lastStepView = leadEvents
+        .filter((e) => e.type === 'step_view' && e.step)
+        .reduce((acc, e) => (acc && acc.ts > e.ts ? acc : e), null);
+      const checkoutStartedAt = leadEvents
+        .filter((e) => e.type === 'checkout_started')
+        .reduce((acc, e) => (acc && acc.ts > e.ts ? acc : e), null)?.ts;
+      const purchases = leadEvents.filter((e) => e.type === 'purchase');
+      const totalValueCents = purchases.reduce((sum, e) => sum + Number(e.payload?.valueCents || 0), 0);
+      return {
+        ...l,
+        lastEventAt: last?.ts || null,
+        lastStep: lastStepView?.step || null,
+        checkoutStartedAt: checkoutStartedAt || null,
+        purchasesCount: purchases.length,
+        totalValueCents
+      };
+    });
+
+    res.json({ leads: enriched });
+  } catch (error) {
+    console.error('Error fetching leads:', error);
+    res.status(500).json({ error: 'Failed to fetch leads' });
   }
-
-  const enriched = rows.map((l) => {
-    const events = eventsByLead.get(l.id) || [];
-    const last = events.reduce((acc, e) => (acc && acc.ts > e.ts ? acc : e), null);
-    const lastStepView = events
-      .filter((e) => e.type === 'step_view' && e.step)
-      .reduce((acc, e) => (acc && acc.ts > e.ts ? acc : e), null);
-    const checkoutStartedAt = events
-      .filter((e) => e.type === 'checkout_started')
-      .reduce((acc, e) => (acc && acc.ts > e.ts ? acc : e), null)?.ts;
-    const purchases = events.filter((e) => e.type === 'purchase');
-    const totalValueCents = purchases.reduce((sum, e) => sum + Number(e.payload?.valueCents || 0), 0);
-    return {
-      ...l,
-      lastEventAt: last?.ts || null,
-      lastStep: lastStepView?.step || null,
-      checkoutStartedAt: checkoutStartedAt || null,
-      purchasesCount: purchases.length,
-      totalValueCents
-    };
-  });
-
-  res.json({ leads: enriched });
 });
 
 app.get('/api/admin/leads/:id', authRequired, adminRequired, async (req, res) => {
-  const { id } = req.params;
-  const data = await db.read();
-  const lead = data.leads.find((l) => l.id === id);
-  if (!lead) return res.status(404).json({ error: 'not_found' });
-  const events = data.events
-    .filter((e) => e.leadId === id)
-    .sort((a, b) => (a.ts > b.ts ? 1 : -1))
-    .slice(-500);
-  res.json({ lead, events });
+  try {
+    const { id } = req.params;
+    const data = await db.read();
+    const leads = Array.isArray(data?.leads) ? data.leads : [];
+    const lead = leads.find((l) => l.id === id);
+    if (!lead) return res.status(404).json({ error: 'not_found' });
+    
+    const events = Array.isArray(data?.events) ? data.events : [];
+    const leadEvents = events
+      .filter((e) => e && e.leadId === id)
+      .sort((a, b) => (a.ts > b.ts ? 1 : -1))
+      .slice(-500);
+      
+    res.json({ lead, events: leadEvents });
+  } catch (err) {
+    console.error('Fetch Lead Error:', err);
+    res.status(500).json({ error: 'internal_error' });
+  }
 });
 
 app.get('/api/admin/metrics/overview', authRequired, adminRequired, async (_req, res) => {
-  const data = await db.read();
-  const totalLeads = data.leads.length;
-  const totalConversions = data.leads.filter((l) => Boolean(l.convertedAt)).length;
-  const conversionRate = totalLeads === 0 ? 0 : totalConversions / totalLeads;
+  try {
+    const data = await db.read();
+    const leads = Array.isArray(data?.leads) ? data.leads : [];
+    const events = Array.isArray(data?.events) ? data.events : [];
+    
+    const totalLeads = leads.length;
+    const totalConversions = leads.filter((l) => Boolean(l && l.convertedAt)).length;
+    const conversionRate = totalLeads === 0 ? 0 : totalConversions / totalLeads;
 
-  const byStep = new Map();
-  for (const e of data.events) {
-    if (e.type !== 'step_view') continue;
-    if (!e.step) continue;
-    byStep.set(e.step, (byStep.get(e.step) || 0) + 1);
-  }
-
-  const now = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startOfWeek = new Date(startOfDay);
-  startOfWeek.setDate(startOfWeek.getDate() - ((startOfWeek.getDay() + 6) % 7));
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  const purchases = data.events.filter((e) => e.type === 'purchase');
-  const checkoutStarts = data.events.filter((e) => e.type === 'checkout_started');
-
-  const toDate = (iso) => {
-    const d = new Date(iso);
-    return Number.isNaN(d.getTime()) ? null : d;
-  };
-
-  function sumInRange(list, start) {
-    let count = 0;
-    let valueCents = 0;
-    for (const e of list) {
-      const d = toDate(e.ts);
-      if (!d) continue;
-      if (d >= start) {
-        count += 1;
-        valueCents += Number(e.payload?.valueCents || 0);
-      }
+    const byStep = new Map();
+    for (const e of events) {
+      if (!e || e.type !== 'step_view') continue;
+      if (!e.step) continue;
+      byStep.set(e.step, (byStep.get(e.step) || 0) + 1);
     }
-    return { count, valueCents };
+
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(startOfDay);
+    startOfWeek.setDate(startOfWeek.getDate() - ((startOfWeek.getDay() + 6) % 7));
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const purchases = events.filter((e) => e && e.type === 'purchase');
+    const checkoutStarts = events.filter((e) => e && e.type === 'checkout_started');
+
+    const toDate = (iso) => {
+      if (!iso) return null;
+      const d = new Date(iso);
+      return Number.isNaN(d.getTime()) ? null : d;
+    };
+
+    function sumInRange(list, start) {
+      let count = 0;
+      let valueCents = 0;
+      for (const e of list) {
+        if (!e) continue;
+        const d = toDate(e.ts);
+        if (!d) continue;
+        if (d >= start) {
+          count += 1;
+          valueCents += Number(e.payload?.valueCents || 0);
+        }
+      }
+      return { count, valueCents };
+    }
+
+    const purchasesDay = sumInRange(purchases, startOfDay);
+    const purchasesWeek = sumInRange(purchases, startOfWeek);
+    const purchasesMonth = sumInRange(purchases, startOfMonth);
+    const checkoutDay = sumInRange(checkoutStarts, startOfDay).count;
+    const checkoutWeek = sumInRange(checkoutStarts, startOfWeek).count;
+    const checkoutMonth = sumInRange(checkoutStarts, startOfMonth).count;
+
+    const abandonmentRateDay = checkoutDay === 0 ? 0 : (checkoutDay - purchasesDay.count) / checkoutDay;
+    const abandonmentRateWeek = checkoutWeek === 0 ? 0 : (checkoutWeek - purchasesWeek.count) / checkoutWeek;
+    const abandonmentRateMonth = checkoutMonth === 0 ? 0 : (checkoutMonth - purchasesMonth.count) / checkoutMonth;
+
+    const lastNDays = 30;
+    const days = [];
+    for (let i = lastNDays - 1; i >= 0; i -= 1) {
+      const d = new Date(startOfDay);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      days.push({ day: key, purchases: 0, valueCents: 0 });
+    }
+    const idxByDay = new Map(days.map((d, i) => [d.day, i]));
+    for (const e of purchases) {
+      if (!e) continue;
+      const day = String(e.ts || '').slice(0, 10);
+      const idx = idxByDay.get(day);
+      if (idx === undefined) continue;
+      days[idx].purchases += 1;
+      days[idx].valueCents += Number(e.payload?.valueCents || 0);
+    }
+
+    const offerViews = events.filter((e) => e && e.type === 'offer_view');
+    const offerAccept = events.filter((e) => e && e.type === 'offer_accept');
+    const upsellTakeRate = offerViews.length === 0 ? 0 : offerAccept.length / offerViews.length;
+
+    res.json({
+      totals: { totalLeads, totalConversions, conversionRate },
+      steps: Array.from(byStep.entries()).map(([step, count]) => ({ step, count })),
+      sales: {
+        day: purchasesDay,
+        week: purchasesWeek,
+        month: purchasesMonth,
+        seriesLast30Days: days
+      },
+      checkout: {
+        starts: { day: checkoutDay, week: checkoutWeek, month: checkoutMonth },
+        abandonmentRate: { day: abandonmentRateDay, week: abandonmentRateWeek, month: abandonmentRateMonth }
+      },
+      offers: { upsellTakeRate, offerViews: offerViews.length, offerAccepts: offerAccept.length }
+    });
+  } catch (error) {
+    console.error('Metrics Error:', error);
+    res.status(500).json({ error: 'failed_metrics' });
   }
-
-  const purchasesDay = sumInRange(purchases, startOfDay);
-  const purchasesWeek = sumInRange(purchases, startOfWeek);
-  const purchasesMonth = sumInRange(purchases, startOfMonth);
-  const checkoutDay = sumInRange(checkoutStarts, startOfDay).count;
-  const checkoutWeek = sumInRange(checkoutStarts, startOfWeek).count;
-  const checkoutMonth = sumInRange(checkoutStarts, startOfMonth).count;
-
-  const abandonmentRateDay = checkoutDay === 0 ? 0 : (checkoutDay - purchasesDay.count) / checkoutDay;
-  const abandonmentRateWeek = checkoutWeek === 0 ? 0 : (checkoutWeek - purchasesWeek.count) / checkoutWeek;
-  const abandonmentRateMonth = checkoutMonth === 0 ? 0 : (checkoutMonth - purchasesMonth.count) / checkoutMonth;
-
-  const lastNDays = 30;
-  const days = [];
-  for (let i = lastNDays - 1; i >= 0; i -= 1) {
-    const d = new Date(startOfDay);
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    days.push({ day: key, purchases: 0, valueCents: 0 });
-  }
-  const idxByDay = new Map(days.map((d, i) => [d.day, i]));
-  for (const e of purchases) {
-    const day = String(e.ts || '').slice(0, 10);
-    const idx = idxByDay.get(day);
-    if (idx === undefined) continue;
-    days[idx].purchases += 1;
-    days[idx].valueCents += Number(e.payload?.valueCents || 0);
-  }
-
-  const offerViews = data.events.filter((e) => e.type === 'offer_view');
-  const offerAccept = data.events.filter((e) => e.type === 'offer_accept');
-  const upsellTakeRate = offerViews.length === 0 ? 0 : offerAccept.length / offerViews.length;
-
-  res.json({
-    totals: { totalLeads, totalConversions, conversionRate },
-    steps: Array.from(byStep.entries()).map(([step, count]) => ({ step, count })),
-    sales: {
-      day: purchasesDay,
-      week: purchasesWeek,
-      month: purchasesMonth,
-      seriesLast30Days: days
-    },
-    checkout: {
-      starts: { day: checkoutDay, week: checkoutWeek, month: checkoutMonth },
-      abandonmentRate: { day: abandonmentRateDay, week: abandonmentRateWeek, month: abandonmentRateMonth }
-    },
-    offers: { upsellTakeRate, offerViews: offerViews.length, offerAccepts: offerAccept.length }
-  });
 });
 
 app.post('/api/upload', authRequired, upload.single('file'), async (req, res) => {
@@ -610,8 +696,9 @@ app.get('/api/debug/storage-check', async (_req, res) => {
   try {
     // 1. Test Connection & List Buckets
     const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-    if (listError) {
-      results.connection = { success: false, error: listError.message, details: listError };
+    
+    if (listError || !buckets || !Array.isArray(buckets)) {
+      results.connection = { success: false, error: listError?.message || 'Failed to list buckets', details: listError };
     } else {
       results.connection = { success: true, buckets: buckets.map(b => b.name) };
       const bucket = buckets.find(b => b.name === results.env.bucket);
@@ -663,56 +750,76 @@ app.get('/api/debug/storage-check', async (_req, res) => {
 // --- User Management ---
 
 app.get('/api/admin/users', authRequired, adminRequired, async (_req, res) => {
-  const data = await db.read();
-  // Return users without password hash
-  const users = data.users.map(u => ({
-    id: u.id,
-    email: u.email,
-    role: u.role,
-    createdAt: u.createdAt
-  }));
-  res.json({ users });
+  try {
+    const data = await db.read();
+    const usersList = Array.isArray(data?.users) ? data.users : [];
+    // Return users without password hash
+    const users = usersList.map(u => ({
+      id: u.id,
+      email: u.email,
+      role: u.role,
+      createdAt: u.createdAt
+    }));
+    res.json({ users });
+  } catch (err) {
+    console.error('Fetch Users Error:', err);
+    res.status(500).json({ error: 'failed_users' });
+  }
 });
 
 app.post('/api/admin/users', authRequired, adminRequired, async (req, res) => {
-  const schema = z.object({
-    email: z.string().email(),
-    password: z.string().min(6),
-    role: z.enum(['admin', 'editor', 'viewer']).default('viewer')
-  });
-  const parsed = schema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: 'invalid_body' });
-  const { email, password, role } = parsed.data;
+  try {
+    const schema = z.object({
+      email: z.string().email(),
+      password: z.string().min(6),
+      role: z.enum(['admin', 'editor', 'viewer']).default('viewer')
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'invalid_body' });
+    const { email, password, role } = parsed.data;
 
-  const created = await db.write(async (data) => {
-    if (data.users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
-      return null; // Email taken
-    }
-    const passwordHash = await bcrypt.hash(password, 10);
-    const user = {
-      id: nanoid(),
-      email,
-      passwordHash,
-      role,
-      createdAt: new Date().toISOString()
-    };
-    data.users.push(user);
-    return user;
-  });
+    const created = await db.write(async (data) => {
+      // Ensure users array exists
+      if (!Array.isArray(data.users)) data.users = [];
+      
+      if (data.users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+        return null; // Email taken
+      }
+      const passwordHash = await bcrypt.hash(password, 10);
+      const user = {
+        id: nanoid(),
+        email,
+        passwordHash,
+        role,
+        createdAt: new Date().toISOString()
+      };
+      data.users.push(user);
+      return user;
+    });
 
-  if (!created) return res.status(400).json({ error: 'email_taken' });
-  res.json({ user: { id: created.id, email: created.email, role: created.role } });
+    if (!created) return res.status(400).json({ error: 'email_taken' });
+    res.json({ user: { id: created.id, email: created.email, role: created.role } });
+  } catch (err) {
+    console.error('Create User Error:', err);
+    res.status(500).json({ error: 'internal_error' });
+  }
 });
 
 app.delete('/api/admin/users/:id', authRequired, adminRequired, async (req, res) => {
-  const { id } = req.params;
-  if (id === req.auth.sub) return res.status(400).json({ error: 'cannot_delete_self' });
+  try {
+    const { id } = req.params;
+    if (id === req.auth.sub) return res.status(400).json({ error: 'cannot_delete_self' });
 
-  await db.write(async (data) => {
-    const idx = data.users.findIndex(u => u.id === id);
-    if (idx !== -1) data.users.splice(idx, 1);
-  });
-  res.json({ ok: true });
+    await db.write(async (data) => {
+      if (!Array.isArray(data.users)) data.users = [];
+      const idx = data.users.findIndex(u => u.id === id);
+      if (idx !== -1) data.users.splice(idx, 1);
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Delete User Error:', err);
+    res.status(500).json({ error: 'internal_error' });
+  }
 });
 
 // --- OpenPix Integration ---
@@ -823,9 +930,11 @@ if (fs.existsSync(distPath)) {
   });
 }
 
-app.use((err, _req, res, _next) => {
+app.use((err, req, res, _next) => {
   const id = crypto.randomUUID();
-  res.status(500).json({ error: 'internal_error', id });
+  console.error(`[Fatal Error] ID: ${id} | Method: ${req.method} | Path: ${req.path}`);
+  console.error(err);
+  res.status(500).json({ error: 'internal_error', id, message: err.message });
 });
 
 await ensureAdminUser();
