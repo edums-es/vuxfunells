@@ -122,7 +122,7 @@ const AdminOverview: React.FC = () => {
   
   if (error) return <div className="text-red-400 bg-red-500/10 p-4 rounded-xl">{error}</div>;
 
-  const chartData = sales?.seriesLast30Days.map(d => ({
+  const chartData = sales?.seriesLast30Days?.map(d => ({
     name: new Date(d.day).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
     value: d.valueCents / 100,
     orders: d.purchases
@@ -238,10 +238,10 @@ const AdminOverview: React.FC = () => {
           <h3 className="text-lg font-bold text-white mb-1">Funil de Vendas</h3>
           <p className="text-sm text-neutral-400 mb-6">Visualizações por etapa</p>
           <div className="space-y-6 flex-1">
-            {steps.length === 0 ? (
+            {steps?.length === 0 ? (
               <div className="text-neutral-500 text-sm text-center py-10">Sem dados suficientes</div>
             ) : (
-              steps.map((step, index) => {
+              steps?.map((step, index) => {
                 const max = Math.max(...steps.map(s => s.count));
                 const percent = max > 0 ? (step.count / max) * 100 : 0;
                 

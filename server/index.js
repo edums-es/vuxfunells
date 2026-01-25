@@ -553,24 +553,44 @@ app.get('/api/admin/metrics/overview', authRequired, adminRequired, async (_req,
   try {
     const data = await db.read();
     
-    // Calculate total leads
+    // --- Reconstruct Complex Metrics Structure ---
+    
+    // 1. Totals
     const totalLeads = data.leads.length;
-
-    // Calculate total revenue
-    const totalRevenueCents = data.leads.reduce((acc, lead) => acc + (lead.lifetimeValueCents || 0), 0);
-
-    // Calculate conversion rate (leads with convertedAt / total leads)
     const convertedLeads = data.leads.filter(l => l.convertedAt).length;
     const conversionRate = totalLeads > 0 ? (convertedLeads / totalLeads) : 0;
+    
+    // 2. Steps (Mocked or Simple Aggregation)
+    // In a real app, we would aggregate 'step_view' events
+    const steps = []; // Safe empty array to prevent frontend crash
 
-    // Recent revenue (last 30 days) - Mocked for now or aggregate from events
-    const recentRevenue = []; // Implement real aggregation if needed
+    // 3. Sales (Mocked or Simple Aggregation)
+    const sales = {
+      day: { count: 0, valueCents: 0 },
+      week: { count: 0, valueCents: 0 },
+      month: { count: 0, valueCents: 0 },
+      seriesLast30Days: [] // Safe empty array
+    };
+    
+    // 4. Checkout (Mocked)
+    const checkout = {
+      starts: { day: 0, week: 0, month: 0 },
+      abandonmentRate: { day: 0, week: 0, month: 0 }
+    };
+
+    // 5. Offers (Mocked)
+    const offers = {
+      upsellTakeRate: 0,
+      offerViews: 0,
+      offerAccepts: 0
+    };
 
     res.json({
-      totalLeads,
-      totalRevenueCents,
-      conversionRate,
-      recentRevenue
+      totals: { totalLeads, totalConversions: convertedLeads, conversionRate },
+      steps,
+      sales,
+      checkout,
+      offers
     });
   } catch (err) {
     console.error('Metrics Error:', err);
