@@ -198,20 +198,35 @@ export async function adminOverviewMetrics(): Promise<OverviewMetrics> {
 }
 
 export async function adminUploadFile(file: File): Promise<{ url: string }> {
+  console.log('[Upload] Starting upload for:', file.name, 'Size:', file.size);
   const formData = new FormData();
   formData.append('file', file);
+  
   // Do not set Content-Type header, browser does it with boundary
+  // BUT we need to remove 'Content-Type' if it was accidentally added by adminHeaders
   const headers = adminHeaders() as Record<string, string>;
-  const res = await fetch(`${API_BASE}/api/upload`, {
-    method: 'POST',
-    headers,
-    body: formData
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(text || `HTTP ${res.status}`);
+  delete headers['Content-Type']; // Important: let browser set boundary
+
+  try {
+      const res = await fetch(`${API_BASE}/api/upload`, {
+        method: 'POST',
+        headers,
+        body: formData
+      });
+      
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        console.error('[Upload] Error:', res.status, text);
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+      
+      const json = await res.json();
+      console.log('[Upload] Success:', json);
+      return json;
+  } catch (error) {
+      console.error('[Upload] Network/Server Error:', error);
+      throw error;
   }
-  return await res.json();
 }
 
 export type AdminUserFull = {
@@ -257,4 +272,57 @@ export async function openPixCharge(data: {
 
 export async function openPixCheckStatus(correlationID: string): Promise<any> {
   return requestJson(`/api/openpix/charge/${correlationID}`);
+}
+
+// --- Admin Settings & Integrations ---
+
+export type AdminSettings = {
+  emailMarketing?: {
+    provider: string;
+    apiKey: string;
+    fromEmail: string;
+  };
+  whatsapp?: {
+    activeTab: 'waba' | 'evolution';
+    waba: { token: string; phoneId: string; wabaId: string };
+    evolution: { url: string; apiKey: string; instanceName: string };
+  };
+};
+
+export type AdminWebhook = {
+  id: number;
+  url: string;
+  event: string;
+  active: boolean;
+};
+
+export async function adminGetSettings(): Promise<{ settings: AdminSettings }> {
+  return requestJson<{ settings: AdminSettings }>('/api/admin/settings', { headers: adminHeaders() });
+}
+
+export async function adminUpdateSettings(settings: Partial<AdminSettings>): Promise<{ settings: AdminSettings }> {
+  return requestJson<{ settings: AdminSettings }>('/api/admin/settings', {
+    method: 'PUT',
+    headers: adminHeaders(),
+    body: JSON.stringify(settings)
+  });
+}
+
+export async function adminListWebhooks(): Promise<{ webhooks: AdminWebhook[] }> {
+  return requestJson<{ webhooks: AdminWebhook[] }>('/api/admin/webhooks', { headers: adminHeaders() });
+}
+
+export async function adminAddWebhook(webhook: Omit<AdminWebhook, 'id'>): Promise<{ webhook: AdminWebhook }> {
+  return requestJson<{ webhook: AdminWebhook }>('/api/admin/webhooks', {
+    method: 'POST',
+    headers: adminHeaders(),
+    body: JSON.stringify(webhook)
+  });
+}
+
+export async function adminDeleteWebhook(id: number): Promise<{ ok: true }> {
+  return requestJson<{ ok: true }>(`/api/admin/webhooks/${id}`, {
+    method: 'DELETE',
+    headers: adminHeaders()
+  });
 }

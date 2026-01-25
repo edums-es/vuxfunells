@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Settings, MessageSquare, Star, ShoppingCart, Tag, Plus, Trash2, ArrowUp, ArrowDown, Check, CheckCircle, ShieldCheck, HelpCircle, Code, AlertTriangle, X, ChevronRight, ChevronDown, Save, Play, Upload, Layout, Video, Image, Link, Mail, Sun, Moon, Smartphone, Monitor, Music } from 'lucide-react';
+import { Settings, MessageSquare, Star, ShoppingCart, Tag, Plus, Trash2, ArrowUp, ArrowDown, Check, CheckCircle, ShieldCheck, HelpCircle, Code, AlertTriangle, X, ChevronRight, ChevronDown, Save, Play, Upload, Layout, Video, Image, Link, Mail, Sun, Moon, Smartphone, Monitor, Music, ArrowLeft, Download, FileJson, MoreVertical } from 'lucide-react';
 import { adminCreateFunnel, adminListFunnels, adminUpdateFunnel, adminUploadFile, adminDeleteFunnel } from '../../lib/api';
 import type { AdminFunnel } from '../../lib/api';
 import type { ChatMessage, CheckoutConfig, FunnelDefinition, OfferConfig, ReviewData, CommentData, CheckoutBlock, VideoCallConfig, IntegrationsConfig, MarketingConfig } from '../../types';
@@ -11,6 +11,7 @@ import VideoCall from '../VideoCall';
 import Checkout from '../Checkout';
 import TikTokReviews from '../TikTokReviews';
 
+import { FlowEditor } from '../flow-builder/FlowEditor';
 
 function safeStringify(value: unknown) {
   return JSON.stringify(value, null, 2);
@@ -28,6 +29,7 @@ const noOp = () => {};
 const FunnelPreview: React.FC<{ def: FunnelDefinition; tab: BuilderTab; device?: 'mobile' | 'desktop' }> = ({ def, tab, device = 'mobile' }) => {
   const [key, setKey] = useState(0);
   const [previewStep, setPreviewStep] = useState<'incoming' | 'video'>('incoming');
+  const [useFlowBuilder, setUseFlowBuilder] = useState(false);
 
   // Force re-render when tab or def changes significantly to reset timers
   useEffect(() => {
@@ -377,19 +379,45 @@ const AdminFunnels: React.FC = () => {
   const [tab, setTab] = useState<BuilderTab>('doctor');
   const [nameDraft, setNameDraft] = useState('');
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('mobile');
+  const [useFlowBuilder, setUseFlowBuilder] = useState(false);
   
   // Create Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newFunnelName, setNewFunnelName] = useState('');
   const [newFunnelType, setNewFunnelType] = useState<'default' | 'empty'>('default');
+  const [editingNode, setEditingNode] = useState<{ type: string; data: any; id?: string } | null>(null);
+  const [isZenMode, setIsZenMode] = useState(false);
 
   const active = useMemo(() => funnels.find((f) => f.id === activeId) || null, [funnels, activeId]);
+
+  const updateGraphNode = (nodeId: string, dataPatch: any) => {
+      setDraftDef(prev => {
+          if (!prev || !prev.nodes) return prev;
+          const newNodes = prev.nodes.map(n => 
+              n.id === nodeId ? { ...n, data: { ...n.data, ...dataPatch } } : n
+          );
+          return { ...prev, nodes: newNodes };
+      });
+  };
+
+  const setStartNode = (nodeId: string) => {
+      setDraftDef(prev => {
+          if (!prev) return prev;
+          return { ...prev, startNodeId: nodeId };
+      });
+  };
+
+  // Helper to determine if we are in graph mode for a specific node
+  const isGraphNode = (id?: string) => {
+      return !!(id && draftDef?.nodes && draftDef.nodes.length > 0);
+  };
 
   const refresh = async () => {
     const res = await adminListFunnels();
     setFunnels(res.funnels);
-    const current = res.funnels.find((f) => f.status === 'active') || res.funnels[0] || null;
-    setActiveId((prev) => prev || (current ? current.id : null));
+    // Don't auto-select to show list view first
+    // const current = res.funnels.find((f) => f.status === 'active') || res.funnels[0] || null;
+    // setActiveId((prev) => prev || (current ? current.id : null));
   };
 
   useEffect(() => {
@@ -477,21 +505,170 @@ const AdminFunnels: React.FC = () => {
     }
   };
 
-  const deleteFunnel = async () => {
-    if (!active || !window.confirm('Tem certeza que deseja excluir este funil? Esta ação não pode ser desfeita.')) return;
+  const deleteFunnel = async (id?: string) => {
+    const targetId = id || active?.id;
+    if (!targetId || !window.confirm('Tem certeza que deseja excluir este funil? Esta ação não pode ser desfeita.')) return;
     setSaving(true);
     setError(null);
     try {
-      await adminDeleteFunnel(active.id);
+      await adminDeleteFunnel(targetId);
       await refresh();
-      setDraftDef(null);
-      setActiveId(null);
+      if (activeId === targetId) {
+          setDraftDef(null);
+          setActiveId(null);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao excluir');
     } finally {
       setSaving(false);
     }
   };
+
+  const handleExport = (funnel: AdminFunnel) => {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(funnel.definition, null, 2));
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("download", `${funnel.name.replace(/\s+/g, '_')}_v${funnel.version}.json`);
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+          try {
+              const json = JSON.parse(event.target?.result as string);
+              const def = ensureDefinition(json);
+              // Create new funnel with this definition
+              setCreating(true);
+              const res = await adminCreateFunnel(`Importado ${new Date().toLocaleDateString()}`, def);
+              setFunnels((prev) => [...prev, res.funnel]);
+              // Optional: Open it immediately?
+              // setActiveId(res.funnel.id);
+          } catch (err) {
+              alert('Erro ao importar JSON: ' + (err instanceof Error ? err.message : 'Arquivo inválido'));
+          } finally {
+              setCreating(false);
+          }
+      };
+      reader.readAsText(file);
+      // Reset input
+      e.target.value = '';
+  };
+
+  const handleActivate = async (funnelId: string) => {
+      setSaving(true);
+      try {
+          await adminUpdateFunnel(funnelId, { status: 'active' });
+          await refresh();
+      } catch (err) {
+          setError(err instanceof Error ? err.message : 'Erro ao ativar');
+      } finally {
+          setSaving(false);
+      }
+  };
+
+  const renderFunnelList = () => (
+      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                  <h1 className="text-3xl font-bold text-white mb-2">Seus Funis</h1>
+                  <p className="text-neutral-400">Gerencie, edite e ative seus funis de venda.</p>
+              </div>
+              <div className="flex gap-3">
+                  <label className="flex items-center gap-2 px-4 py-3 bg-neutral-900 border border-white/10 hover:border-white/20 hover:bg-neutral-800 rounded-xl cursor-pointer transition-all text-sm font-semibold text-white shadow-lg shadow-black/20">
+                      <Upload className="w-4 h-4" />
+                      Importar JSON
+                      <input type="file" className="hidden" accept=".json" onChange={handleImport} />
+                  </label>
+                  <button
+                      onClick={create}
+                      className="flex items-center gap-2 px-6 py-3 bg-white text-black hover:bg-neutral-200 rounded-xl font-bold transition-all shadow-lg shadow-white/10"
+                  >
+                      <Plus className="w-5 h-5" />
+                      Novo Funil
+                  </button>
+              </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {funnels.map((f) => (
+                  <div key={f.id} className="group relative bg-neutral-900 border border-white/5 hover:border-purple-500/50 rounded-3xl p-6 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-900/10 flex flex-col h-auto min-h-[280px]">
+                      {f.status === 'active' && (
+                          <div className="absolute top-4 right-4 bg-green-500/10 text-green-400 border border-green-500/20 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-[0_0_15px_rgba(34,197,94,0.15)]">
+                              <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                              ATIVO
+                          </div>
+                      )}
+                      
+                      <div className="mb-auto">
+                          <div className="w-12 h-12 rounded-2xl bg-neutral-800 flex items-center justify-center mb-4 group-hover:bg-purple-500/20 group-hover:text-purple-400 transition-colors">
+                              <Layout className="w-6 h-6 text-neutral-400 group-hover:text-purple-400" />
+                          </div>
+                          <h3 className="text-xl font-bold text-white mb-2 line-clamp-1" title={f.name}>{f.name}</h3>
+                          <div className="flex items-center gap-4 text-xs text-neutral-500 font-mono">
+                              <span>v{f.version}</span>
+                              <span>•</span>
+                              <span>{new Date().toLocaleDateString()}</span>
+                          </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 pt-6 border-t border-white/5">
+                          <button 
+                              onClick={() => setActiveId(f.id)}
+                              className="col-span-2 flex items-center justify-center gap-2 py-2.5 bg-white text-black rounded-xl font-bold hover:bg-neutral-200 transition-colors"
+                          >
+                              Editar Funil
+                          </button>
+                          
+                          <button 
+                              onClick={() => handleExport(f)}
+                              className="flex items-center justify-center gap-2 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl text-xs font-semibold border border-white/5 transition-colors"
+                              title="Exportar JSON"
+                          >
+                              <Download className="w-4 h-4" /> Exportar
+                          </button>
+
+                           {f.status !== 'active' ? (
+                              <button 
+                                  onClick={() => handleActivate(f.id)}
+                                  className="flex items-center justify-center gap-2 py-2 bg-neutral-800 hover:bg-green-600 hover:text-white text-neutral-400 rounded-xl text-xs font-semibold border border-white/5 transition-colors"
+                                  title="Ativar este funil"
+                              >
+                                  <Play className="w-4 h-4" /> Ativar
+                              </button>
+                           ) : (
+                              <button 
+                                  className="flex items-center justify-center gap-2 py-2 bg-neutral-800/50 text-neutral-600 rounded-xl text-xs font-semibold border border-white/5 cursor-not-allowed"
+                                  disabled
+                              >
+                                  <Check className="w-4 h-4" /> Ativo
+                              </button>
+                           )}
+                           
+                           <button 
+                              onClick={() => deleteFunnel(f.id)}
+                              className="col-span-2 flex items-center justify-center gap-2 py-2 hover:bg-red-500/10 text-neutral-500 hover:text-red-400 rounded-xl text-xs font-semibold transition-colors mt-1"
+                          >
+                              <Trash2 className="w-3 h-3" /> Excluir permanentemente
+                          </button>
+                      </div>
+                  </div>
+              ))}
+              
+              <button onClick={create} className="group bg-neutral-900/50 border border-white/5 border-dashed hover:border-white/20 rounded-3xl p-6 transition-all duration-300 flex flex-col items-center justify-center gap-4 h-[280px]">
+                  <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Plus className="w-8 h-8 text-neutral-400" />
+                  </div>
+                  <span className="font-bold text-neutral-400 group-hover:text-white transition-colors">Criar Novo Funil</span>
+              </button>
+          </div>
+      </div>
+  );
 
   if (loading) return <div className="text-neutral-300">Carregando…</div>;
 
@@ -924,1787 +1101,1217 @@ const AdminFunnels: React.FC = () => {
       });
     };
 
-    const tabs: { id: BuilderTab; label: string; icon: React.ElementType }[] = [
-      { id: 'doctor', label: 'Doutora', icon: Settings },
-      { id: 'audio', label: 'Áudio & Sons', icon: Music },
-      { id: 'chat', label: 'Chat', icon: MessageSquare },
-      { id: 'calls', label: 'Chamadas', icon: Video },
-      { id: 'reviews', label: 'Reviews', icon: Star },
-      { id: 'checkout', label: 'Checkout', icon: ShoppingCart },
-      { id: 'offers', label: 'Upsell/Downsell', icon: Tag },
-      { id: 'integrations', label: 'Integrações', icon: Link },
-      { id: 'marketing', label: 'Email Marketing', icon: Mail }
-    ];
+    // --- Form Renders ---
+    
+    const renderDoctorForm = () => {
+        const isGraph = editingNode?.id && isGraphNode(editingNode.id);
+        const data = isGraph ? editingNode!.data : def.doctor;
+        const update = isGraph 
+            ? (patch: any) => updateGraphNode(editingNode!.id!, patch)
+            : updateDoctor;
 
-    return (
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 space-y-6">
-          <div className="flex items-center gap-1 p-1 bg-neutral-950/50 border border-white/5 rounded-2xl overflow-x-auto no-scrollbar">
-            {tabs.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                className={cn(
-                  "relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap",
-                  tab === t.id ? "text-white" : "text-neutral-400 hover:text-neutral-200 hover:bg-white/5"
-                )}
-              >
-                {tab === t.id && (
-                  <div
-                    className="absolute inset-0 bg-neutral-800 rounded-xl shadow-sm animate-in fade-in duration-300"
-                  />
-                )}
-                <span className="relative z-10 flex items-center gap-2">
-                  <t.icon className="w-4 h-4" />
-                  {t.label}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          <div className="relative">
-            <div
-              key={tab}
-              className="bg-neutral-900/50 backdrop-blur-sm border border-white/5 rounded-3xl p-6 shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-300"
-            >
-              {tab === 'doctor' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="md:col-span-2">
-                    <h3 className="text-lg font-bold text-white mb-1">Configurações da Doutora</h3>
-                    <p className="text-neutral-400 text-sm">Personalize a identidade visual e informações básicas.</p>
-                  </div>
-                  <div>
-                    <FieldLabel label="Nome" />
-                    <TextInput value={def.doctor.name} onChange={(v) => updateDoctor({ name: v })} placeholder="Dra. Ana" />
-                  </div>
-                  <div>
-                    <FieldLabel label="Cargo" />
-                    <TextInput value={def.doctor.role} onChange={(v) => updateDoctor({ role: v })} placeholder="Fertilidade" />
-                  </div>
-                  <div className="md:col-span-2">
-                    <FieldLabel label="Avatar URL" />
-                    <div className="flex gap-2">
-                      <TextInput value={def.doctor.avatarUrl} onChange={(v) => updateDoctor({ avatarUrl: v })} type="url" className="flex-1" />
-                      <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
-                        <Upload className="w-4 h-4" />
-                        <input 
-                          type="file" 
-                          className="hidden" 
-                          accept="image/*"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            try {
-                              const res = await adminUploadFile(file);
-                              updateDoctor({ avatarUrl: res.url });
-                            } catch (err) {
-                              alert('Erro ao enviar arquivo: ' + (err instanceof Error ? err.message : String(err)));
-                            }
-                          }} 
-                        />
-                      </label>
-                    </div>
-                  </div>
-                  <div className="md:col-span-2">
-                    <FieldLabel label="Wallpaper URL" />
-                    <div className="flex gap-2">
-                      <TextInput value={def.doctor.wallpaperUrl} onChange={(v) => updateDoctor({ wallpaperUrl: v })} type="url" className="flex-1" />
-                      <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
-                        <Upload className="w-4 h-4" />
-                        <input 
-                          type="file" 
-                          className="hidden" 
-                          accept="image/*"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            try {
-                              const res = await adminUploadFile(file);
-                              updateDoctor({ wallpaperUrl: res.url });
-                            } catch (err) {
-                              console.error(err);
-                              alert(`Erro ao enviar arquivo: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
-                            }
-                          }} 
-                        />
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <FieldLabel label="Tema" hint="Aparência do funil" />
-                    <div className="flex gap-2">
-                       <button
-                         onClick={() => updateTheme('light')}
-                         className={cn(
-                           "flex-1 p-3 rounded-xl border text-sm font-semibold transition-all flex items-center justify-center gap-2",
-                           (def.theme || 'light') === 'light'
-                             ? "bg-white text-black border-white"
-                             : "bg-neutral-900 text-neutral-400 border-white/10 hover:bg-neutral-800"
-                         )}
-                       >
-                         <Sun className="w-4 h-4" />
-                         Claro (Light)
-                       </button>
-                       <button
-                         onClick={() => updateTheme('dark')}
-                         className={cn(
-                           "flex-1 p-3 rounded-xl border text-sm font-semibold transition-all flex items-center justify-center gap-2",
-                           def.theme === 'dark'
-                             ? "bg-neutral-800 text-white border-white/20"
-                             : "bg-neutral-900 text-neutral-400 border-white/10 hover:bg-neutral-800"
-                         )}
-                       >
-                         <Moon className="w-4 h-4" />
-                         Escuro (Dark)
-                       </button>
-                    </div>
-                  </div>
+        return (
+        <div className="space-y-6">
+            {isGraph && <div className="text-xs text-purple-400 mb-2 font-mono">MODO GRAFO: NÓ {editingNode?.id}</div>}
+            <div>
+                <FieldLabel label="Nome" />
+                <TextInput value={data.name} onChange={(v) => update({ name: v })} placeholder="Dra. Ana" />
+            </div>
+            <div>
+                <FieldLabel label="Cargo" />
+                <TextInput value={data.role} onChange={(v) => update({ role: v })} placeholder="Fertilidade" />
+            </div>
+            <div>
+                <FieldLabel label="Avatar URL" />
+                <div className="flex gap-2">
+                    <TextInput value={data.avatarUrl} onChange={(v) => update({ avatarUrl: v })} type="url" className="flex-1" />
+                    <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
+                    <Upload className="w-4 h-4" />
+                    <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                            const res = await adminUploadFile(file);
+                            update({ avatarUrl: res.url });
+                        } catch (err) { alert('Erro ao enviar arquivo'); }
+                    }} />
+                    </label>
                 </div>
-              )}
-
-              {tab === 'audio' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                   <div className="md:col-span-2">
-                     <h3 className="text-lg font-bold text-white mb-1">Configurações de Áudio e Sons</h3>
-                     <p className="text-neutral-400 text-sm">Personalize a experiência sonora do funil.</p>
-                   </div>
-                   
-                   <div className="md:col-span-2 p-4 bg-neutral-950/30 rounded-2xl border border-white/5 space-y-4">
-                      <div className="flex items-center gap-3 mb-2">
-                         <div className="p-2 bg-purple-500/10 rounded-lg text-purple-400"><Music className="w-5 h-5" /></div>
-                         <div>
-                            <h4 className="font-bold text-white">Música de Fundo</h4>
-                            <p className="text-xs text-neutral-400">Toca continuamente durante o chat</p>
-                         </div>
-                      </div>
-                      
-                      <FieldLabel label="URL da Música (MP3)" />
-                      <div className="flex gap-2">
-                         <TextInput 
-                           value={def.audio?.backgroundMusicUrl || ''} 
-                           onChange={(v) => updateAudio({ backgroundMusicUrl: v })} 
-                           placeholder="https://..." 
-                           className="flex-1"
-                         />
-                         <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
-                           <Upload className="w-4 h-4" />
-                           <input 
-                             type="file" 
-                             className="hidden" 
-                             accept="audio/*"
-                             onChange={async (e) => {
-                               const file = e.target.files?.[0];
-                               if (!file) return;
-                               try {
-                                 const res = await adminUploadFile(file);
-                                 updateAudio({ backgroundMusicUrl: res.url });
-                               } catch (err) {
-                                 alert('Erro ao enviar arquivo: ' + (err instanceof Error ? err.message : String(err)));
-                               }
-                             }} 
-                           />
-                         </label>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                         <div>
-                            <FieldLabel label="Volume (0.1 a 1.0)" />
-                            <NumberInput 
-                              value={def.audio?.backgroundMusicVolume ?? 0.1} 
-                              onChange={(v) => updateAudio({ backgroundMusicVolume: v })} 
-                              min={0} 
-                              max={1} 
-                              step={0.1} 
-                            />
-                         </div>
-                         <div className="flex items-end pb-2">
-                            <Toggle 
-                              checked={def.audio?.messageSoundEnabled ?? true} 
-                              onChange={(v) => updateAudio({ messageSoundEnabled: v })} 
-                              label="Sons de Mensagem" 
-                            />
-                         </div>
-                      </div>
-                   </div>
+            </div>
+            <div>
+                <FieldLabel label="Wallpaper URL" />
+                <div className="flex gap-2">
+                    <TextInput value={data.wallpaperUrl} onChange={(v) => update({ wallpaperUrl: v })} type="url" className="flex-1" />
+                    <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
+                    <Upload className="w-4 h-4" />
+                    <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                            const res = await adminUploadFile(file);
+                            update({ wallpaperUrl: res.url });
+                        } catch (err) { alert('Erro ao enviar arquivo'); }
+                    }} />
+                    </label>
                 </div>
-              )}
+            </div>
+            <div>
+                <FieldLabel label="Tema" />
+                <div className="flex gap-2">
+                    <button onClick={() => updateTheme('light')} className={cn("flex-1 p-3 rounded-xl border text-sm font-semibold flex items-center justify-center gap-2", (data.theme || 'light') === 'light' ? "bg-white text-black border-white" : "bg-neutral-900 text-neutral-400 border-white/10")}>
+                        <Sun className="w-4 h-4" /> Claro
+                    </button>
+                    <button onClick={() => updateTheme('dark')} className={cn("flex-1 p-3 rounded-xl border text-sm font-semibold flex items-center justify-center gap-2", data.theme === 'dark' ? "bg-neutral-800 text-white border-white/20" : "bg-neutral-900 text-neutral-400 border-white/10")}>
+                        <Moon className="w-4 h-4" /> Escuro
+                    </button>
+                </div>
+            </div>
+        </div>
+    )};
 
-              {tab === 'chat' && (
-                <div className="space-y-8">
-                  {(['part1', 'part2'] as const).map((part) => (
-                    <div key={part} className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-lg font-bold text-white">{part === 'part1' ? 'Parte 1: Introdução' : 'Parte 2: VSL/Oferta'}</h3>
-                          <p className="text-neutral-400 text-sm">Sequência de mensagens do chat.</p>
-                        </div>
-                        <button onClick={() => addChatMessage(part)} className="flex items-center gap-2 text-sm font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-xl px-4 py-2 transition-all shadow-lg shadow-purple-900/20">
-                          <Plus className="w-4 h-4" />
-                          Adicionar mensagem
-                        </button>
-                      </div>
+    const renderAudioForm = () => {
+        const isGraph = editingNode?.id && isGraphNode(editingNode.id);
+        const data = isGraph ? editingNode!.data : def.audio || {};
+        const update = isGraph 
+            ? (patch: any) => updateGraphNode(editingNode!.id!, patch)
+            : updateAudio;
 
-                      <div className="space-y-4">
-                        {def.chat[part].map((m, idx) => (
-                          <div
-                            key={`${m.id}-${idx}`}
-                            className="bg-neutral-950/50 border border-white/5 rounded-2xl p-5 relative group animate-in fade-in slide-in-from-bottom-2 duration-300"
-                          >
-                            <div className="flex items-center justify-between gap-2 mb-4">
-                                <div className="flex items-center gap-3">
-                                  <div className={cn(
-                                    "w-8 h-8 rounded-full flex items-center justify-center border text-xs font-bold",
-                                    m.sender === 'doctor' ? "bg-purple-500/20 border-purple-500/50 text-purple-300" : "bg-neutral-800 border-neutral-700 text-neutral-400"
-                                  )}>
-                                    {idx + 1}
-                                  </div>
-                                  <div className="text-sm font-bold text-white">
-                                    {m.sender === 'doctor' ? 'Doutora' : 'Usuária'}
-                                    <span className="mx-2 text-neutral-600">·</span>
-                                    <span className="text-neutral-400 uppercase text-xs">{m.type}</span>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button
-                                    onClick={() => moveChatMessage(part, idx, idx - 1)}
-                                    className="p-1.5 hover:bg-white/10 rounded-lg text-neutral-400 hover:text-white transition-colors"
-                                  >
-                                    <ArrowUp className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => moveChatMessage(part, idx, idx + 1)}
-                                    className="p-1.5 hover:bg-white/10 rounded-lg text-neutral-400 hover:text-white transition-colors"
-                                  >
-                                    <ArrowDown className="w-4 h-4" />
-                                  </button>
-                                  <div className="w-px h-4 bg-white/10 mx-1" />
-                                  <button
-                                    onClick={() => removeChatMessage(part, idx)}
-                                    className="p-1.5 hover:bg-red-500/20 rounded-lg text-red-400 hover:text-red-300 transition-colors"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </div>
+        return (
+        <div className="space-y-6">
+            {isGraph && <div className="text-xs text-purple-400 mb-2 font-mono">MODO GRAFO: NÓ {editingNode?.id}</div>}
+            <div>
+                <FieldLabel label="Música de Fundo URL" />
+                <div className="flex gap-2">
+                    <TextInput value={data.backgroundMusicUrl || ''} onChange={(v) => update({ backgroundMusicUrl: v })} className="flex-1" />
+                    <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
+                    <Upload className="w-4 h-4" />
+                    <input type="file" className="hidden" accept="audio/*" onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                            const res = await adminUploadFile(file);
+                            update({ backgroundMusicUrl: res.url });
+                        } catch (err) { alert('Erro ao enviar arquivo'); }
+                    }} />
+                    </label>
+                </div>
+            </div>
+            <div>
+                <FieldLabel label="Volume (0.0 - 1.0)" />
+                <NumberInput value={data.backgroundMusicVolume ?? 0.1} onChange={(v) => update({ backgroundMusicVolume: v })} min={0} max={1} step={0.1} />
+            </div>
+            <Toggle checked={data.messageSoundEnabled ?? true} onChange={(v) => update({ messageSoundEnabled: v })} label="Sons de Mensagem" />
+        </div>
+    )};
 
-                              <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                                <div className="md:col-span-3">
-                                  <FieldLabel label="Remetente" />
-                                  <Select
-                                    value={m.sender}
-                                    onChange={(v) => updateChatMessage(part, idx, { sender: v as ChatMessage['sender'] })}
-                                    options={[
-                                      { value: 'doctor', label: 'Doutora' },
-                                      { value: 'user', label: 'Usuária' }
-                                    ]}
-                                  />
-                                </div>
-                                <div className="md:col-span-3">
-                                  <FieldLabel label="Tipo" />
-                                  <Select
-                                    value={m.type}
-                                    onChange={(v) => updateChatMessage(part, idx, { type: v as ChatMessage['type'] })}
-                                    options={[
-                                      { value: 'text', label: 'Texto' },
-                                      { value: 'audio', label: 'Áudio' },
-                                      { value: 'image', label: 'Imagem' },
-                                      { value: 'video', label: 'Vídeo' }
-                                    ]}
-                                  />
-                                </div>
-                                <div className="md:col-span-3">
-                                  <FieldLabel label="Delay (ms)" />
-                                  <NumberInput value={Number(m.delay || 0)} onChange={(v) => updateChatMessage(part, idx, { delay: v })} min={0} step={100} />
-                                </div>
-                                <div className="md:col-span-3">
-                                  <FieldLabel label="Ação Especial" hint="Transição" />
-                                  <Select
-                                    value={m.action || ''}
-                                    onChange={(v) => updateChatMessage(part, idx, { action: (v || undefined) as ChatMessage['action'] })}
-                                    options={[
-                                      { value: '', label: '—' },
-                                      { value: 'open_video', label: 'Abrir Vídeo' },
-                                      { value: 'skip_video', label: 'Pular Vídeo' },
-                                      { value: 'open_reviews', label: 'Abrir Reviews' }
-                                    ]}
-                                  />
-                                </div>
-                                <div className="md:col-span-12">
-                                  <FieldLabel 
-                                    label={m.type === 'text' ? "Conteúdo" : "Arquivo de Mídia"} 
-                                    hint={m.type === 'audio' ? 'Duração (ex: 0:42)' : undefined} 
-                                  />
-                                  {m.type === 'text' ? (
-                                    <TextArea value={m.content} onChange={(v) => updateChatMessage(part, idx, { content: v })} rows={3} />
-                                  ) : (
-                                    <div className="space-y-3 p-4 bg-neutral-900/50 rounded-xl border border-white/5">
-                                      <div className="flex flex-col gap-2">
-                                        <div className="flex items-center gap-3">
-                                          <label className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl cursor-pointer transition-colors text-sm font-semibold shadow-lg shadow-purple-900/20">
-                                            <Upload className="w-4 h-4" />
-                                            <span>Escolher Arquivo</span>
-                                            <input 
-                                              type="file" 
-                                              className="hidden" 
-                                              accept={m.type === 'audio' ? 'audio/*' : m.type === 'video' ? 'video/*' : 'image/*'}
-                                              onChange={async (e) => {
+
+
+    const renderChatMessageForm = (data: any) => {
+        const isGraph = editingNode?.id && isGraphNode(editingNode.id);
+
+        if (isGraph) {
+            const m = editingNode!.data;
+            const update = (patch: any) => updateGraphNode(editingNode!.id!, patch);
+            const quickReplies = m.quickReplies || [];
+
+            return (
+                <div className="space-y-6">
+                    <div className="text-xs text-purple-400 mb-2 font-mono">MODO GRAFO: NÓ {editingNode?.id}</div>
+                    <div>
+                        <FieldLabel label="Remetente" />
+                        <Select value={m.sender} onChange={(v) => update({ sender: v })} options={[{ value: 'doctor', label: 'Doutora' }, { value: 'user', label: 'Usuária' }]} />
+                    </div>
+                    <div>
+                        <FieldLabel label="Tipo" />
+                        <Select value={m.type} onChange={(v) => update({ type: v })} options={[{ value: 'text', label: 'Texto' }, { value: 'audio', label: 'Áudio' }, { value: 'image', label: 'Imagem' }, { value: 'video', label: 'Vídeo' }]} />
+                    </div>
+                    <div>
+                        <FieldLabel label="Delay (ms)" />
+                        <NumberInput value={m.delay} onChange={(v) => update({ delay: v })} step={100} />
+                    </div>
+                    <div>
+                        <FieldLabel label="Conteúdo / URL" />
+                        <TextArea value={m.content} onChange={(v) => update({ content: v })} rows={4} />
+                        {m.type !== 'text' && (
+                            <div className="flex flex-col gap-2">
+                                {m.type === 'video' || m.type === 'video-call' ? (
+                                    <div className="px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-yellow-400 text-xs text-center">
+                                        Para vídeos, utilize apenas URLs externas (YouTube, Vimeo, Panda, etc).
+                                    </div>
+                                ) : (
+                                    <label className="mt-2 flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 w-full justify-center">
+                                        <Upload className="w-4 h-4" />
+                                        Upload Mídia (Máx 50MB)
+                                        <input 
+                                            type="file" 
+                                            className="hidden" 
+                                            accept={m.type === 'audio' ? 'audio/*' : 'image/*'}
+                                            onChange={async (e) => {
                                                 const file = e.target.files?.[0];
                                                 if (!file) return;
-                                                try {
-                                                  const res = await adminUploadFile(file);
-                                                  updateChatMessage(part, idx, { mediaUrl: res.url });
-                                                } catch (err) {
-                                                  console.error(err);
-                                                  alert(`Erro ao enviar arquivo: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
+
+                                                // VALIDATION: Check file size (limit to 50MB)
+                                                const MAX_SIZE_MB = 50;
+                                                if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+                                                    alert(`Arquivo muito grande! O limite é de ${MAX_SIZE_MB}MB.`);
+                                                    e.target.value = ''; // Reset input
+                                                    return;
                                                 }
-                                              }}
-                                            />
-                                          </label>
-                                          {m.mediaUrl ? (
-                                            <span className="text-xs text-green-400 flex items-center gap-1 bg-green-500/10 px-2 py-1 rounded-lg border border-green-500/20">
-                                              <Check className="w-3 h-3" /> Carregado
-                                            </span>
-                                          ) : (
-                                            <span className="text-xs text-neutral-500">Nenhum arquivo selecionado</span>
-                                          )}
-                                        </div>
-                                        
-                                        {m.mediaUrl && (
-                                          <div className="text-xs text-neutral-400 break-all font-mono bg-black/20 p-2 rounded-lg border border-white/5">
-                                            {m.mediaUrl}
-                                          </div>
-                                        )}
-                                      </div>
 
-                                      <div>
-                                         <FieldLabel label={m.type === 'audio' ? "Duração (ex: 0:42)" : m.type === 'image' ? "Legenda (Opcional)" : "Texto Alternativo / Descrição"} />
-                                         <TextInput value={m.content} onChange={(v) => updateChatMessage(part, idx, { content: v })} />
-                                      </div>
-                                      
-                                      {m.type === 'video' && (
-                                        <div className="pt-2">
-                                          <Toggle
-                                            checked={Boolean(m.forceVideo)}
-                                            onChange={(checked) => updateChatMessage(part, idx, { forceVideo: checked || undefined })}
-                                            label="Vídeo Forçado (Impede pular)"
-                                          />
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="md:col-span-12">
-                                  <Toggle
-                                    checked={Boolean(m.requiresInput)}
-                                    onChange={(checked) => updateChatMessage(part, idx, { requiresInput: checked || undefined })}
-                                    label="Pausar e aguardar resposta da usuária"
-                                  />
-                                </div>
-
-                                {m.sender === 'doctor' && (
-                                  <div className="md:col-span-12 p-4 bg-neutral-900/50 rounded-xl border border-white/5 space-y-3">
-                                    <div className="flex items-center justify-between">
-                                       <FieldLabel label="Respostas Rápidas (Botões)" />
-                                       <button 
-                                          onClick={() => {
-                                            const current = m.quickReplies || [];
-                                            updateChatMessage(part, idx, { quickReplies: [...current, { label: 'Nova Opção', value: 'Nova Opção' }] });
-                                          }}
-                                          className="text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1"
-                                       >
-                                          <Plus className="w-3 h-3" /> Adicionar Botão
-                                       </button>
-                                    </div>
-                                    
-                                    {(m.quickReplies || []).map((qr, qrIdx) => (
-                                       <div key={qrIdx} className="flex gap-2 items-center">
-                                          <TextInput 
-                                            value={qr.label} 
-                                            onChange={(v) => {
-                                              const current = [...(m.quickReplies || [])];
-                                              current[qrIdx] = { ...current[qrIdx], label: v, value: v }; // Sync value by default
-                                              updateChatMessage(part, idx, { quickReplies: current });
-                                            }}
-                                            placeholder="Texto do botão"
-                                            className="flex-1"
-                                          />
-                                          <button 
-                                            onClick={() => {
-                                              const current = [...(m.quickReplies || [])];
-                                              current.splice(qrIdx, 1);
-                                              updateChatMessage(part, idx, { quickReplies: current });
-                                            }}
-                                            className="p-2 hover:bg-red-500/20 rounded-lg text-red-400"
-                                          >
-                                            <Trash2 className="w-4 h-4" />
-                                          </button>
-                                       </div>
-                                    ))}
-                                  </div>
+                                                try {
+                                                    console.log('[Graph] Uploading file...', file.name);
+                                                    const res = await adminUploadFile(file);
+                                                    console.log('[Graph] Upload complete:', res.url);
+                                                    update({ mediaUrl: res.url });
+                                                } catch (err) { 
+                                                    console.error('[Graph] Upload failed:', err);
+                                                    alert('Erro ao enviar arquivo: ' + (err as Error).message); 
+                                                } finally {
+                                                    e.target.value = '';
+                                                }
+                                            }} 
+                                        />
+                                    </label>
                                 )}
-                              </div>
                             </div>
-                          ))}
-                        
-                        {def.chat[part].length === 0 ? (
-                          <div className="text-center py-12 border-2 border-dashed border-neutral-800 rounded-2xl text-neutral-500">
-                            Nenhuma mensagem nesta seção.
-                          </div>
-                        ) : null}
-                      </div>
+                        )}
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {tab === 'calls' && (
-                <div className="space-y-8">
-                  {/* Incoming Call Screen (Ringtone) */}
-                  <div className="space-y-4">
-                     <div>
-                        <h3 className="text-lg font-bold text-white">1. Tela de Chamada (Recebimento)</h3>
-                        <p className="text-neutral-400 text-sm">Configure o visual e som da chamada chegando.</p>
-                     </div>
-                     <div className="bg-neutral-950/50 border border-white/5 rounded-2xl p-6">
-                        <div className="mb-6">
-                           <Toggle 
-                             checked={def.incomingCall?.skipCallScreen || false}
-                             onChange={(v) => updateIncomingCall({ skipCallScreen: v })}
-                             label="Pular tela de recebimento (Ir direto para vídeo)"
-                           />
+                    {m.sender === 'doctor' && m.type !== 'video' && (
+                        <div className="bg-neutral-950/30 p-4 rounded-xl border border-white/5">
+                            <div className="flex justify-between mb-2">
+                                <FieldLabel label="Botões (Quick Replies)" />
+                                <button onClick={() => update({ quickReplies: [...quickReplies, { label: 'Opção', value: 'Opção' }] })}><Plus className="w-3 h-3" /></button>
+                            </div>
+                            <div className="space-y-2">
+                                {quickReplies.map((qr: any, i: number) => (
+                                    <div key={i} className="flex gap-2">
+                                        <TextInput value={qr.label} onChange={(v) => {
+                                            const newQr = [...quickReplies];
+                                            newQr[i] = { ...newQr[i], label: v, value: v };
+                                            update({ quickReplies: newQr });
+                                        }} />
+                                        <button onClick={() => {
+                                            const newQr = [...quickReplies];
+                                            newQr.splice(i, 1);
+                                            update({ quickReplies: newQr });
+                                        }}><X className="w-4 h-4" /></button>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-
-                        <FieldLabel label="Áudio do Toque (Ringtone)" hint="Som que toca enquanto chama" />
-                        <div className="flex gap-2">
-                           <TextInput 
-                             value={def.incomingCall?.ringtoneUrl || ''} 
-                             onChange={(v) => updateIncomingCall({ ringtoneUrl: v })} 
-                             className="flex-1" 
-                             placeholder="https://..."
-                           />
-                           <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
-                              <Upload className="w-4 h-4" />
-                              <input 
-                                type="file" 
-                                className="hidden" 
-                                accept="audio/*"
-                                onChange={async (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (!file) return;
-                                  try {
-                                    const res = await adminUploadFile(file);
-                                    updateIncomingCall({ ringtoneUrl: res.url });
-                                  } catch (err) {
-                                    alert('Erro ao enviar arquivo');
-                                  }
-                                }} 
-                              />
-                           </label>
-                        </div>
-                     </div>
-                  </div>
-
-                  {/* Voice Call Screen (Connected) */}
-                  <div className="space-y-4">
-                     <div>
-                        <h3 className="text-lg font-bold text-white">2. Chamada de Voz (Ao Atender)</h3>
-                        <p className="text-neutral-400 text-sm">O que acontece quando a pessoa atende a ligação.</p>
-                     </div>
-                     <div className="bg-neutral-950/50 border border-white/5 rounded-2xl p-6 space-y-6">
-                        <div>
-                           <FieldLabel label="Áudio da Voz" hint="Gravação que simula a doutora falando" />
-                           <div className="flex gap-2">
-                              <TextInput 
-                                value={def.incomingCall?.voiceUrl || ''} 
-                                onChange={(v) => updateIncomingCall({ voiceUrl: v })} 
-                                className="flex-1" 
-                                placeholder="https://..."
-                              />
-                              <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
-                                 <Upload className="w-4 h-4" />
-                                 <input 
-                                   type="file" 
-                                   className="hidden" 
-                                   accept="audio/*"
-                                   onChange={async (e) => {
-                                     const file = e.target.files?.[0];
-                                     if (!file) return;
-                                     try {
-                                       const res = await adminUploadFile(file);
-                                       updateIncomingCall({ voiceUrl: res.url });
-                                     } catch (err) {
-                                       alert('Erro ao enviar arquivo');
-                                     }
-                                   }} 
-                                 />
-                              </label>
-                           </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                           <div>
-                              <FieldLabel label="Duração (segundos)" hint="Tempo total até encerrar a chamada de voz" />
-                              <NumberInput 
-                                value={def.incomingCall?.duration || 12} 
-                                onChange={(v) => updateIncomingCall({ duration: v })} 
-                                min={5}
-                              />
-                           </div>
-                           <div>
-                              <FieldLabel label="Após encerrar" />
-                              <Toggle 
-                                checked={def.incomingCall?.autoStartVideo || false}
-                                onChange={(v) => updateIncomingCall({ autoStartVideo: v })}
-                                label="Ir direto para chamada de vídeo"
-                              />
-                           </div>
-                        </div>
-                     </div>
-                  </div>
-
-                  {/* Video Call Section */}
-                  <div className="space-y-4">
-                     <div>
-                        <h3 className="text-lg font-bold text-white">3. Chamada de Vídeo</h3>
-                        <p className="text-neutral-400 text-sm">Configuração da videochamada (FaceTime simulado).</p>
-                     </div>
-                     <div className="bg-neutral-950/50 border border-white/5 rounded-2xl p-6 space-y-6">
-                        <div>
-                           <FieldLabel label="URL do Vídeo" />
-                           <div className="flex gap-2">
-                              <TextInput 
-                                value={def.videoCall?.videoUrl || ''} 
-                                onChange={(v) => updateVideoCall({ videoUrl: v })} 
-                                className="flex-1" 
-                                placeholder="https://..."
-                              />
-                              <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
-                                 <Upload className="w-4 h-4" />
-                                 <input 
-                                   type="file" 
-                                   className="hidden" 
-                                   accept="video/*"
-                                   onChange={async (e) => {
-                                     const file = e.target.files?.[0];
-                                     if (!file) return;
-                                     try {
-                                       const res = await adminUploadFile(file);
-                                       updateVideoCall({ videoUrl: res.url });
-                                     } catch (err) {
-                                       alert('Erro ao enviar arquivo');
-                                     }
-                                   }} 
-                                 />
-                              </label>
-                           </div>
-                        </div>
-                        <div>
-                           <FieldLabel label="Duração (segundos)" />
-                           <NumberInput 
-                             value={def.videoCall?.duration || 60} 
-                             onChange={(v) => updateVideoCall({ duration: v })} 
-                             min={0}
-                           />
-                        </div>
-                     </div>
-                  </div>
-                </div>
-              )}
-
-              {tab === 'reviews' && (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-bold text-white">Prova Social</h3>
-                      <p className="text-neutral-400 text-sm">Gerencie os depoimentos e comentários.</p>
-                    </div>
-                    <button onClick={addReviewItem} className="flex items-center gap-2 text-sm font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-xl px-4 py-2 transition-all shadow-lg shadow-purple-900/20">
-                      <Plus className="w-4 h-4" />
-                      Adicionar review
-                    </button>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div className="space-y-4">
-                      {def.reviews.items.map((r, idx) => (
-                        <div
-                          key={`${r.id}-${idx}`}
-                          className="bg-neutral-950/50 border border-white/5 rounded-2xl p-5 relative group animate-in fade-in zoom-in-95 duration-300"
-                        >
-                          <div className="flex items-center justify-between gap-2 mb-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-500/50 text-blue-300 flex items-center justify-center text-xs font-bold">
-                                {idx + 1}
-                              </div>
-                              <div className="text-sm font-bold text-white">
-                                {r.name || 'Novo Review'}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span
-                                className="text-xs font-medium bg-neutral-800 text-neutral-300 rounded-lg px-3 py-1.5"
-                              >
-                                {r.comments?.length || 0} Comentários
-                              </span>
-                              <div className="w-px h-4 bg-white/10 mx-1" />
-                              <button onClick={() => moveReviewItem(idx, idx - 1)} className="p-1.5 hover:bg-white/10 rounded-lg text-neutral-400 hover:text-white"><ArrowUp className="w-4 h-4" /></button>
-                              <button onClick={() => moveReviewItem(idx, idx + 1)} className="p-1.5 hover:bg-white/10 rounded-lg text-neutral-400 hover:text-white"><ArrowDown className="w-4 h-4" /></button>
-                              <button onClick={() => removeReviewItem(idx)} className="p-1.5 hover:bg-red-500/20 rounded-lg text-red-400 hover:text-red-300"><Trash2 className="w-4 h-4" /></button>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                            <div className="md:col-span-4">
-                              <FieldLabel label="Nome" />
-                              <TextInput value={r.name} onChange={(v) => updateReviewItem(idx, { name: v })} placeholder="Mariana S." />
-                            </div>
-                            <div className="md:col-span-2">
-                              <FieldLabel label="Id" />
-                              <NumberInput value={Number(r.id || 0)} onChange={(v) => updateReviewItem(idx, { id: v })} min={1} step={1} />
-                            </div>
-                            <div className="md:col-span-2">
-                              <FieldLabel label="Idade" />
-                              <NumberInput value={Number(r.age || 0)} onChange={(v) => updateReviewItem(idx, { age: v })} min={0} step={1} />
-                            </div>
-                            <div className="md:col-span-4">
-                              <FieldLabel label="Local" />
-                              <TextInput value={r.location} onChange={(v) => updateReviewItem(idx, { location: v })} placeholder="São Paulo, SP" />
-                            </div>
-                            <div className="md:col-span-12">
-                              <FieldLabel label="Texto do Review" />
-                              <TextArea value={r.text} onChange={(v) => updateReviewItem(idx, { text: v })} rows={3} />
-                            </div>
-                            <div className="md:col-span-3">
-                              <FieldLabel label="Likes" />
-                              <TextInput value={r.likes} onChange={(v) => updateReviewItem(idx, { likes: v })} placeholder="12,3K" />
-                            </div>
-                            <div className="md:col-span-9">
-                              <FieldLabel label="Vídeo URL (opcional)" />
-                              <div className="flex gap-2">
-                                <TextInput value={r.videoUrl || ''} onChange={(v) => updateReviewItem(idx, { videoUrl: v || undefined })} type="url" className="flex-1" />
-                                <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
-                                  <Upload className="w-4 h-4" />
-                                  <input 
-                                    type="file" 
-                                    className="hidden" 
-                                    accept="video/*"
-                                    onChange={async (e) => {
-                                      const file = e.target.files?.[0];
-                                      if (!file) return;
-                                      try {
-                                        const res = await adminUploadFile(file);
-                                        updateReviewItem(idx, { videoUrl: res.url });
-                                      } catch (err) {
-                                        alert('Erro ao enviar arquivo');
-                                      }
-                                    }} 
-                                  />
-                                </label>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Nested Comments Section */}
-                          <div className="mt-6 pl-4 border-l-2 border-neutral-800 space-y-4">
-                            <div className="flex items-center justify-between">
-                              <h4 className="text-sm font-bold text-neutral-400">Comentários</h4>
-                              <button onClick={() => addComment(idx)} className="text-xs flex items-center gap-1 text-purple-400 hover:text-purple-300">
-                                <Plus className="w-3 h-3" /> Adicionar
-                              </button>
-                            </div>
-                            {(r.comments || []).map((c, cIdx) => (
-                              <div key={`${idx}-${cIdx}`} className="bg-neutral-900/50 rounded-xl p-3 border border-white/5 relative group/comment">
-                                <button onClick={() => removeComment(idx, cIdx)} className="absolute top-2 right-2 opacity-0 group-hover/comment:opacity-100 p-1 hover:bg-red-500/20 rounded text-red-400 transition-all">
-                                  <X className="w-3 h-3" />
-                                </button>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                  <TextInput className="text-xs py-2" value={c.user} onChange={(v) => updateComment(idx, cIdx, { user: v })} placeholder="Nome" />
-                                  <TextInput className="text-xs py-2" value={c.time} onChange={(v) => updateComment(idx, cIdx, { time: v })} placeholder="Tempo" />
-                                  <NumberInput className="text-xs py-2" value={Number(c.likes || 0)} onChange={(v) => updateComment(idx, cIdx, { likes: v })} placeholder="Likes" />
-                                  <NumberInput className="text-xs py-2" value={Number(c.avatarId || 1)} onChange={(v) => updateComment(idx, cIdx, { avatarId: v })} placeholder="Avatar ID" />
-                                  <div className="col-span-2 md:col-span-4 flex gap-2">
-                                    <TextInput className="text-xs py-2 flex-1" value={c.avatarUrl || ''} onChange={(v) => updateComment(idx, cIdx, { avatarUrl: v })} placeholder="URL do Avatar (opcional)" />
-                                    <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
-                                      <Upload className="w-3 h-3" />
-                                      <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
-                                        const file = e.target.files?.[0];
-                                        if (!file) return;
-                                        try {
-                                          const res = await adminUploadFile(file);
-                                          updateComment(idx, cIdx, { avatarUrl: res.url });
-                                        } catch (err) { alert('Erro: ' + (err instanceof Error ? err.message : String(err))); }
-                                      }} />
-                                    </label>
-                                  </div>
-                                  <div className="col-span-2 md:col-span-4">
-                                    <TextArea className="text-xs min-h-[40px]" value={c.text} onChange={(v) => updateComment(idx, cIdx, { text: v })} rows={2} />
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {def.reviews.items.length === 0 && <div className="text-center py-8 text-neutral-500">Nenhum review adicionado.</div>}
-                  </div>
-                </div>
-              )}
-
-              {tab === 'checkout' && (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-bold text-white mb-1">Página de Checkout</h3>
-                      <p className="text-neutral-400 text-sm">Configure os blocos e o design do checkout.</p>
-                    </div>
-                    {!def.checkout.blocks?.length && (
-                      <button 
-                        type="button"
-                        onClick={enablePagebuilder}
-                        className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-purple-900/20 transition-all flex items-center gap-2"
-                      >
-                        <Layout className="w-4 h-4" />
-                        Ativar Pagebuilder
-                      </button>
                     )}
-                  </div>
+                </div>
+            );
+        }
 
-                  {def.checkout.blocks && def.checkout.blocks.length > 0 ? (
-                    <div className="space-y-4">
-                      {/* Block List */}
-                      {def.checkout.blocks.map((block, idx) => {
-                        if (!block) return null;
-                        return (
-                        <div
-                          key={block.id || idx}
-                          className="bg-neutral-950/50 border border-white/5 rounded-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300"
-                        >
-                          {/* Block Header */}
-                            <div className="bg-neutral-900/50 p-3 flex items-center justify-between border-b border-white/5">
-                              <div className="flex items-center gap-3">
-                                <span className="bg-neutral-800 text-neutral-400 px-2 py-1 rounded text-xs font-mono uppercase">{block.type}</span>
-                                <span className="text-sm font-bold text-white">
-                                  {block.type === 'header' && 'Cabeçalho Simples'}
-                                  {block.type === 'hero' && 'Oferta Principal'}
-                                  {block.type === 'bullets' && 'Lista de Benefícios'}
-                                  {block.type === 'guarantee' && 'Garantia'}
-                                  {block.type === 'reviews' && 'Prova Social'}
-                                  {block.type === 'faq' && 'Perguntas Frequentes'}
-                                  {block.type === 'html' && 'Código HTML'}
-                                  {block.type === 'footer' && 'Rodapé'}
-                                  {block.type === 'video' && 'Vídeo'}
-                                  {block.type === 'image' && 'Imagem'}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <button onClick={() => moveBlock(idx, idx - 1)} disabled={idx === 0} className="p-1.5 hover:bg-white/10 rounded-lg text-neutral-400 hover:text-white disabled:opacity-30"><ArrowUp className="w-4 h-4" /></button>
-                                <button onClick={() => moveBlock(idx, idx + 1)} disabled={idx === def.checkout.blocks!.length - 1} className="p-1.5 hover:bg-white/10 rounded-lg text-neutral-400 hover:text-white disabled:opacity-30"><ArrowDown className="w-4 h-4" /></button>
-                                <button onClick={() => removeBlock(idx)} className="p-1.5 hover:bg-red-500/10 text-red-400 rounded-lg"><Trash2 className="w-4 h-4" /></button>
-                              </div>
-                            </div>
+        const { part, index } = data;
+        const m = def.chat[part][index];
+        if (!m) return <div>Mensagem não encontrada</div>;
 
-                            {/* Block Content Editor */}
-                            <div className="p-4 space-y-4">
-                              {block.type === 'header' && (
-                                <div><FieldLabel label="Texto" /><TextInput value={block.content.text} onChange={(v) => updateBlock(idx, { content: { ...block.content, text: v } })} /></div>
-                              )}
-                              
-                              {block.type === 'hero' && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div className="md:col-span-2"><FieldLabel label="Headline" /><TextArea value={block.content.headline} onChange={(v) => updateBlock(idx, { content: { ...block.content, headline: v } })} rows={2} /></div>
-                                  <div className="md:col-span-2"><FieldLabel label="Subheadline" /><TextArea value={block.content.subheadline} onChange={(v) => updateBlock(idx, { content: { ...block.content, subheadline: v } })} rows={2} /></div>
-                                  <div><FieldLabel label="Nome Produto" /><TextInput value={block.content.productName} onChange={(v) => updateBlock(idx, { content: { ...block.content, productName: v } })} /></div>
-                                  <div><FieldLabel label="Badge" /><TextInput value={block.content.badge} onChange={(v) => updateBlock(idx, { content: { ...block.content, badge: v } })} /></div>
-                                  <div><FieldLabel label="Preço" /><TextInput value={block.content.price} onChange={(v) => updateBlock(idx, { content: { ...block.content, price: v } })} /></div>
-                                  <div><FieldLabel label="Preço Comparação" /><TextInput value={block.content.compareAtPrice} onChange={(v) => updateBlock(idx, { content: { ...block.content, compareAtPrice: v } })} /></div>
-                                  <div><FieldLabel label="Botão CTA" /><TextInput value={block.content.ctaText} onChange={(v) => updateBlock(idx, { content: { ...block.content, ctaText: v } })} /></div>
-                                  <div><FieldLabel label="Texto Seguro" /><TextInput value={block.content.secureText} onChange={(v) => updateBlock(idx, { content: { ...block.content, secureText: v } })} /></div>
-                                  <div className="md:col-span-2">
-                                    <FieldLabel label="Imagem do Produto" />
-                                    <div className="flex gap-2">
-                                      <TextInput value={block.content.productImageUrl || ''} onChange={(v) => updateBlock(idx, { content: { ...block.content, productImageUrl: v } })} className="flex-1" />
-                                      <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
-                                        <Upload className="w-4 h-4" />
-                                        <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
-                                          const file = e.target.files?.[0];
-                                          if (!file) return;
-                                          try {
-                                            const res = await adminUploadFile(file);
-                                            updateBlock(idx, { content: { ...block.content, productImageUrl: res.url } });
-                                          } catch (err) { alert('Erro ao enviar arquivo'); }
-                                        }} />
-                                      </label>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-
-                              {block.type === 'bullets' && (
-                                <div>
-                                  <FieldLabel label="Título" />
-                                  <TextInput value={block.content.title} onChange={(v) => updateBlock(idx, { content: { ...block.content, title: v } })} className="mb-3" />
-                                  <FieldLabel label="Itens" />
-                                  <div className="space-y-2">
-                                    {(block.content.items || []).map((item: string, i: number) => (
-                                      <div key={i} className="flex gap-2">
-                                        <TextInput value={item} onChange={(v) => {
-                                          const newItems = [...block.content.items];
-                                          newItems[i] = v;
-                                          updateBlock(idx, { content: { ...block.content, items: newItems } });
-                                        }} />
-                                        <button onClick={() => {
-                                          const newItems = block.content.items.filter((_: any, idx: number) => idx !== i);
-                                          updateBlock(idx, { content: { ...block.content, items: newItems } });
-                                        }} className="p-2 hover:bg-red-500/10 text-red-400 rounded"><X className="w-4 h-4" /></button>
-                                      </div>
-                                    ))}
-                                    <button onClick={() => updateBlock(idx, { content: { ...block.content, items: [...(block.content.items || []), ''] } })} className="text-xs flex items-center gap-1 text-purple-400 font-bold hover:text-purple-300"><Plus className="w-3 h-3" /> Adicionar Item</button>
-                                  </div>
-                                </div>
-                              )}
-
-                              {block.type === 'guarantee' && (
-                                <div className="space-y-3">
-                                  <div><FieldLabel label="Título" /><TextInput value={block.content.title} onChange={(v) => updateBlock(idx, { content: { ...block.content, title: v } })} /></div>
-                                  <div><FieldLabel label="Texto" /><TextArea value={block.content.text} onChange={(v) => updateBlock(idx, { content: { ...block.content, text: v } })} rows={3} /></div>
-                                </div>
-                              )}
-
-                              {block.type === 'html' && (
-                                <div><FieldLabel label="HTML Personalizado" /><TextArea value={block.content.html} onChange={(v) => updateBlock(idx, { content: { ...block.content, html: v } })} rows={6} className="font-mono text-xs" /></div>
-                              )}
-                              
-                              {block.type === 'footer' && (
-                                <div>
-                                  <FieldLabel label="Linhas do Rodapé" />
-                                  <div className="space-y-2">
-                                    {(block.content.lines || []).map((line: string, i: number) => (
-                                      <div key={i} className="flex gap-2">
-                                        <TextInput value={line} onChange={(v) => {
-                                          const newLines = [...block.content.lines];
-                                          newLines[i] = v;
-                                          updateBlock(idx, { content: { ...block.content, lines: newLines } });
-                                        }} />
-                                        <button onClick={() => {
-                                          const newLines = block.content.lines.filter((_: any, idx: number) => idx !== i);
-                                          updateBlock(idx, { content: { ...block.content, lines: newLines } });
-                                        }} className="p-2 hover:bg-red-500/10 text-red-400 rounded"><X className="w-4 h-4" /></button>
-                                      </div>
-                                    ))}
-                                    <button onClick={() => updateBlock(idx, { content: { ...block.content, lines: [...(block.content.lines || []), ''] } })} className="text-xs flex items-center gap-1 text-purple-400 font-bold hover:text-purple-300"><Plus className="w-3 h-3" /> Adicionar Linha</button>
-                                  </div>
-                                </div>
-                              )}
-
-                              {block.type === 'video' && (
-                                <div className="space-y-3">
-                                  <div>
-                                    <FieldLabel label="URL do Vídeo" />
-                                    <div className="flex gap-2">
-                                      <TextInput value={block.content.url} onChange={(v) => updateBlock(idx, { content: { ...block.content, url: v } })} className="flex-1" />
-                                      <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
-                                        <Upload className="w-4 h-4" />
-                                        <input type="file" className="hidden" accept="video/*" onChange={async (e) => {
-                                          const file = e.target.files?.[0];
-                                          if (!file) return;
-                                          try {
-                                            const res = await adminUploadFile(file);
-                                            updateBlock(idx, { content: { ...block.content, url: res.url } });
-                                          } catch (err) { alert('Erro ao enviar arquivo'); }
-                                        }} />
-                                      </label>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-4">
-                                    <label className="flex items-center gap-2 text-sm text-neutral-300">
-                                      <input type="checkbox" checked={block.content.autoplay} onChange={(e) => updateBlock(idx, { content: { ...block.content, autoplay: e.target.checked } })} className="rounded bg-neutral-800 border-white/10 text-purple-500 focus:ring-purple-500" />
-                                      Autoplay
-                                    </label>
-                                    <label className="flex items-center gap-2 text-sm text-neutral-300">
-                                      <input type="checkbox" checked={block.content.controls} onChange={(e) => updateBlock(idx, { content: { ...block.content, controls: e.target.checked } })} className="rounded bg-neutral-800 border-white/10 text-purple-500 focus:ring-purple-500" />
-                                      Controles
-                                    </label>
-                                  </div>
-                                </div>
-                              )}
-
-                              {block.type === 'image' && (
-                                <div className="space-y-3">
-                                  <div>
-                                    <FieldLabel label="URL da Imagem" />
-                                    <div className="flex gap-2">
-                                      <TextInput value={block.content.url} onChange={(v) => updateBlock(idx, { content: { ...block.content, url: v } })} className="flex-1" />
-                                      <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
-                                        <Upload className="w-4 h-4" />
-                                        <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
-                                          const file = e.target.files?.[0];
-                                          if (!file) return;
-                                          try {
-                                            const res = await adminUploadFile(file);
-                                            updateBlock(idx, { content: { ...block.content, url: res.url } });
-                                          } catch (err) { alert('Erro ao enviar arquivo'); }
-                                        }} />
-                                      </label>
-                                    </div>
-                                  </div>
-                                  <div><FieldLabel label="Texto Alt (Acessibilidade)" /><TextInput value={block.content.alt} onChange={(v) => updateBlock(idx, { content: { ...block.content, alt: v } })} /></div>
-                                </div>
-                              )}
-
-                              {block.type === 'faq' && (
-                                <div>
-                                  <FieldLabel label="Perguntas Frequentes" />
-                                  <div className="space-y-4">
-                                    {(block.content.items || []).map((item: any, i: number) => {
-                                      if (!item) return null;
-                                      return (
-                                      <div key={i} className="bg-neutral-900/50 p-3 rounded-xl border border-white/5 relative group">
-                                        <button onClick={() => {
-                                          const newItems = block.content.items.filter((_: any, idx: number) => idx !== i);
-                                          updateBlock(idx, { content: { ...block.content, items: newItems } });
-                                        }} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/10 text-red-400 rounded-lg"><Trash2 className="w-4 h-4" /></button>
-                                        
-                                        <div className="space-y-2">
-                                          <TextInput placeholder="Pergunta" value={item.question} onChange={(v) => {
-                                            const newItems = [...block.content.items];
-                                            newItems[i] = { ...item, question: v };
-                                            updateBlock(idx, { content: { ...block.content, items: newItems } });
-                                          }} />
-                                          <TextArea placeholder="Resposta" value={item.answer} onChange={(v) => {
-                                            const newItems = [...block.content.items];
-                                            newItems[i] = { ...item, answer: v };
-                                            updateBlock(idx, { content: { ...block.content, items: newItems } });
-                                          }} rows={2} />
-                                        </div>
-                                      </div>
-                                    );
-                                    })}
-                                    <button onClick={() => updateBlock(idx, { content: { ...block.content, items: [...(block.content.items || []), { question: '', answer: '' }] } })} className="text-xs flex items-center gap-1 text-purple-400 font-bold hover:text-purple-300"><Plus className="w-3 h-3" /> Adicionar Pergunta</button>
-                                  </div>
-                                </div>
-                              )}
-
-                              {block.type === 'reviews' && (
-                                <div>
-                                  <FieldLabel label="Avaliações de Clientes" />
-                                  <div className="space-y-4">
-                                    {(block.content.items || []).map((item: any, i: number) => {
-                                      if (!item) return null;
-                                      return (
-                                      <div key={i} className="bg-neutral-900/50 p-3 rounded-xl border border-white/5 relative group">
-                                        <button onClick={() => {
-                                          const newItems = block.content.items.filter((_: any, idx: number) => idx !== i);
-                                          updateBlock(idx, { content: { ...block.content, items: newItems } });
-                                        }} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/10 text-red-400 rounded-lg"><Trash2 className="w-4 h-4" /></button>
-                                        
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-2">
-                                          <TextInput placeholder="Nome" value={item.name} onChange={(v) => {
-                                            const newItems = [...block.content.items];
-                                            newItems[i] = { ...item, name: v };
-                                            updateBlock(idx, { content: { ...block.content, items: newItems } });
-                                          }} />
-                                          <TextInput placeholder="Tempo (ex: 2 min atrás)" value={item.timeAgo} onChange={(v) => {
-                                            const newItems = [...block.content.items];
-                                            newItems[i] = { ...item, timeAgo: v };
-                                            updateBlock(idx, { content: { ...block.content, items: newItems } });
-                                          }} />
-                                        </div>
-                                        <div className="flex gap-2 mb-2">
-                                           <TextInput placeholder="Avatar URL" value={item.avatar} onChange={(v) => {
-                                            const newItems = [...block.content.items];
-                                            newItems[i] = { ...item, avatar: v };
-                                            updateBlock(idx, { content: { ...block.content, items: newItems } });
-                                          }} className="flex-1" />
-                                          <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
-                                            <Upload className="w-4 h-4" />
-                                            <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
-                                              const file = e.target.files?.[0];
-                                              if (!file) return;
-                                              try {
-                                                const res = await adminUploadFile(file);
-                                                const newItems = [...block.content.items];
-                                                newItems[i] = { ...item, avatar: res.url };
-                                                updateBlock(idx, { content: { ...block.content, items: newItems } });
-                                              } catch (err) { alert('Erro: ' + (err instanceof Error ? err.message : String(err))); }
-                                            }} />
-                                          </label>
-                                        </div>
-                                        <TextArea placeholder="Depoimento" value={item.text} onChange={(v) => {
-                                          const newItems = [...block.content.items];
-                                          newItems[i] = { ...item, text: v };
-                                          updateBlock(idx, { content: { ...block.content, items: newItems } });
-                                        }} rows={2} />
-                                      </div>
-                                    );
-                                    })}
-                                    <button onClick={() => updateBlock(idx, { content: { ...block.content, items: [...(block.content.items || []), { name: '', text: '', avatar: '', rating: 5, timeAgo: 'agora' }] } })} className="text-xs flex items-center gap-1 text-purple-400 font-bold hover:text-purple-300"><Plus className="w-3 h-3" /> Adicionar Review</button>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-
-
-                      {/* Add Block Actions */}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-4 border-t border-white/5">
-                        {[
-                          { type: 'header', label: 'Cabeçalho', icon: Layout },
-                          { type: 'hero', label: 'Oferta', icon: Star },
-                          { type: 'bullets', label: 'Benefícios', icon: CheckCircle },
-                          { type: 'guarantee', label: 'Garantia', icon: ShieldCheck },
-                          { type: 'reviews', label: 'Reviews', icon: MessageSquare },
-                          { type: 'faq', label: 'FAQ', icon: HelpCircle },
-                          { type: 'html', label: 'HTML', icon: Code },
-                          { type: 'video', label: 'Vídeo', icon: Video },
-                          { type: 'image', label: 'Imagem', icon: Image },
-                          { type: 'footer', label: 'Rodapé', icon: Layout },
-                        ].map((item) => (
-                          <button
-                            key={item.type}
-                            onClick={() => addBlock(item.type as any)}
-                            className="flex flex-col items-center justify-center gap-2 bg-neutral-900/50 hover:bg-neutral-800 border border-white/5 hover:border-purple-500/30 p-4 rounded-xl transition-all group"
-                          >
-                            <item.icon className="w-6 h-6 text-neutral-400 group-hover:text-purple-400 transition-colors" />
-                            <span className="text-xs font-bold text-neutral-300 group-hover:text-white">{item.label}</span>
-                          </button>
-                        ))}
-                      </div>
+        return (
+            <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono bg-neutral-800 px-2 py-1 rounded text-neutral-400">#{index + 1}</span>
+                    <div className="flex gap-2">
+                        <button onClick={() => moveChatMessage(part, index, index - 1)} className="p-2 hover:bg-white/10 rounded"><ArrowUp className="w-4 h-4" /></button>
+                        <button onClick={() => moveChatMessage(part, index, index + 1)} className="p-2 hover:bg-white/10 rounded"><ArrowDown className="w-4 h-4" /></button>
+                        <button onClick={() => { removeChatMessage(part, index); setEditingNode(null); }} className="p-2 hover:bg-red-500/20 text-red-400 rounded"><Trash2 className="w-4 h-4" /></button>
                     </div>
-                  ) : (
-                    <div className="space-y-6">
-                      <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-xl flex items-start gap-3">
-                          <AlertTriangle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
-                          <div>
-                            <h4 className="text-sm font-bold text-yellow-500">Modo Legado</h4>
-                            <p className="text-xs text-yellow-200/70">Você está usando a configuração antiga. Recomendamos migrar para o Pagebuilder para ter mais flexibilidade.</p>
-                          </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 opacity-80 hover:opacity-100 transition-opacity">
-                        <div>
-                          <FieldLabel label="Header Label" />
-                          <TextInput value={def.checkout.headerLabel} onChange={(v) => updateCheckout({ headerLabel: v })} />
-                        </div>
-                        <div>
-                          <FieldLabel label="Badge" />
-                          <TextInput value={def.checkout.badge} onChange={(v) => updateCheckout({ badge: v })} />
-                        </div>
-                        <div className="md:col-span-2">
-                          <FieldLabel label="Headline" />
-                          <TextArea value={def.checkout.headline} onChange={(v) => updateCheckout({ headline: v })} rows={2} />
-                        </div>
-                        <div className="md:col-span-2">
-                          <FieldLabel label="Subheadline" />
-                          <TextArea value={def.checkout.subheadline} onChange={(v) => updateCheckout({ subheadline: v })} rows={2} />
-                        </div>
-                        
-                        <div className="md:col-span-2 h-px bg-white/5 my-2" />
-
-                        <div>
-                          <FieldLabel label="Nome do Produto" />
-                          <TextInput value={def.checkout.productName} onChange={(v) => updateCheckout({ productName: v })} />
-                        </div>
-                        <div>
-                          <FieldLabel label="Imagem do Produto URL" />
-                          <div className="flex gap-2">
-                            <TextInput value={def.checkout.productImageUrl || ''} onChange={(v) => updateCheckout({ productImageUrl: v })} type="url" className="flex-1" />
-                            <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
-                              <Upload className="w-4 h-4" />
-                              <input 
+                </div>
+                <div>
+                    <FieldLabel label="Remetente" />
+                    <Select value={m.sender} onChange={(v) => updateChatMessage(part, index, { sender: v as any })} options={[{ value: 'doctor', label: 'Doutora' }, { value: 'user', label: 'Usuária' }]} />
+                </div>
+                <div>
+                    <FieldLabel label="Tipo" />
+                    <Select value={m.type} onChange={(v) => updateChatMessage(part, index, { type: v as any })} options={[{ value: 'text', label: 'Texto' }, { value: 'audio', label: 'Áudio' }, { value: 'image', label: 'Imagem' }, { value: 'video', label: 'Vídeo' }]} />
+                </div>
+                <div>
+                    <FieldLabel label="Delay (ms)" />
+                    <NumberInput value={m.delay} onChange={(v) => updateChatMessage(part, index, { delay: v })} step={100} />
+                </div>
+                <div>
+                    <FieldLabel label="Conteúdo / URL" />
+                    <TextArea value={m.content} onChange={(v) => updateChatMessage(part, index, { content: v })} rows={4} />
+                    {m.type !== 'text' && (
+                         <label className="mt-2 flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 w-full justify-center">
+                            <Upload className="w-4 h-4" />
+                            Upload Mídia
+                            <input 
                                 type="file" 
                                 className="hidden" 
-                                accept="image/*"
                                 onChange={async (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (!file) return;
-                                  try {
-                                    const res = await adminUploadFile(file);
-                                    updateCheckout({ productImageUrl: res.url });
-                                  } catch (err) {
-                                    alert('Erro ao enviar arquivo');
-                                  }
-                                }}
-                              />
-                            </label>
-                          </div>
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    try {
+                                        console.log('[Admin] Uploading file...', file.name);
+                                        const res = await adminUploadFile(file);
+                                        console.log('[Admin] Upload complete:', res.url);
+                                        updateChatMessage(part, index, { mediaUrl: res.url });
+                                    } catch (err) { 
+                                        console.error('[Admin] Upload failed:', err);
+                                        alert('Erro ao enviar arquivo: ' + (err as Error).message); 
+                                    } finally {
+                                        // Reset input so same file can be selected again if needed
+                                        e.target.value = '';
+                                    }
+                                }} 
+                            />
+                        </label>
+                    )}
+                </div>
+                 {m.sender === 'doctor' && (
+                    <div className="bg-neutral-950/30 p-4 rounded-xl border border-white/5">
+                        <div className="flex justify-between mb-2">
+                            <FieldLabel label="Botões (Quick Replies)" />
+                            <button onClick={() => updateChatMessage(part, index, { quickReplies: [...(m.quickReplies||[]), { label: 'Opção', value: 'Opção' }] })}><Plus className="w-3 h-3" /></button>
                         </div>
-                        <div>
-                          <FieldLabel label="Preço (Display)" />
-                          <TextInput value={def.checkout.price} onChange={(v) => updateCheckout({ price: v })} />
-                        </div>
-                        <div>
-                          <FieldLabel label="Preço (Comparação)" />
-                          <TextInput value={def.checkout.compareAtPrice} onChange={(v) => updateCheckout({ compareAtPrice: v })} />
-                        </div>
-                        <div>
-                          <FieldLabel label="Valor em Centavos" hint={`R$ ${formatMoney(def.checkout.valueCents)}`} />
-                          <NumberInput value={Number(def.checkout.valueCents || 0)} onChange={(v) => updateCheckout({ valueCents: v })} min={0} step={100} />
-                        </div>
-
-                        <div className="md:col-span-2 h-px bg-white/5 my-2" />
-
-                        <div>
-                          <FieldLabel label="CTA Primário" />
-                          <TextInput value={def.checkout.primaryCtaText} onChange={(v) => updateCheckout({ primaryCtaText: v })} />
-                        </div>
-                        <div>
-                          <FieldLabel label="CTA Secundário" />
-                          <TextInput value={def.checkout.secondaryCtaText} onChange={(v) => updateCheckout({ secondaryCtaText: v })} />
-                        </div>
-                        <div className="md:col-span-2">
-                          <FieldLabel label="Texto de Segurança" />
-                          <TextInput value={def.checkout.securePaymentText} onChange={(v) => updateCheckout({ securePaymentText: v })} />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-neutral-950/30 border border-white/5 rounded-2xl p-4">
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="font-bold text-sm text-white">Benefícios (Bullets)</div>
-                            <button onClick={() => addStringItem('bullets', '')} className="p-1 hover:bg-white/10 rounded-lg"><Plus className="w-4 h-4" /></button>
-                          </div>
-                          <div className="space-y-2">
-                            {def.checkout.bullets.map((b, idx) => (
-                              <div key={idx} className="flex gap-2">
-                                <TextInput value={b} onChange={(e) => updateStringItem('bullets', idx, e)} className="py-2" />
-                                <button onClick={() => removeStringItem('bullets', idx)} className="text-red-400 hover:bg-red-500/10 p-2 rounded-lg"><X className="w-4 h-4" /></button>
-                              </div>
+                        <div className="space-y-2">
+                            {(m.quickReplies || []).map((qr, i) => (
+                                <div key={i} className="flex gap-2">
+                                    <TextInput value={qr.label} onChange={(v) => {
+                                        const newQr = [...(m.quickReplies || [])];
+                                        newQr[i] = { ...newQr[i], label: v, value: v };
+                                        updateChatMessage(part, index, { quickReplies: newQr });
+                                    }} />
+                                    <button onClick={() => {
+                                        const newQr = [...(m.quickReplies || [])];
+                                        newQr.splice(i, 1);
+                                        updateChatMessage(part, index, { quickReplies: newQr });
+                                    }}><X className="w-4 h-4" /></button>
+                                </div>
                             ))}
-                          </div>
                         </div>
-
-                        <div className="bg-neutral-950/30 border border-white/5 rounded-2xl p-4">
-                          <div className="font-bold text-sm text-white mb-4">Garantia</div>
-                          <div className="space-y-3">
-                            <div>
-                              <FieldLabel label="Título" />
-                              <TextInput value={def.checkout.guaranteeTitle} onChange={(v) => updateCheckout({ guaranteeTitle: v })} />
-                            </div>
-                            <div>
-                              <FieldLabel label="Texto" />
-                              <TextArea value={def.checkout.guaranteeText} onChange={(v) => updateCheckout({ guaranteeText: v })} rows={4} />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-neutral-950/30 border border-white/5 rounded-2xl p-4">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="font-bold text-sm text-white">Reviews do Checkout</div>
-                          <button onClick={addCheckoutReview} className="text-xs flex items-center gap-1 bg-neutral-800 hover:bg-neutral-700 px-3 py-1.5 rounded-lg"><Plus className="w-3 h-3" /> Adicionar</button>
-                        </div>
-                        <div className="grid grid-cols-1 gap-4">
-                          {def.checkout.checkoutReviews.map((r, idx) => (
-                            <div key={idx} className="bg-neutral-900/50 p-4 rounded-xl border border-white/5 relative group">
-                              <button onClick={() => removeCheckoutReview(idx)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/10 text-red-400 rounded-lg"><Trash2 className="w-4 h-4" /></button>
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <div><FieldLabel label="Nome" /><TextInput value={r.name} onChange={(v) => updateCheckoutReview(idx, { name: v })} /></div>
-                                <div className="md:col-span-2">
-                                  <FieldLabel label="Avatar URL" />
-                                  <div className="flex gap-2">
-                                    <TextInput value={r.avatarUrl} onChange={(v) => updateCheckoutReview(idx, { avatarUrl: v })} type="url" className="flex-1" />
-                                    <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
-                                      <Upload className="w-4 h-4" />
-                                      <input 
-                                        type="file" 
-                                        className="hidden" 
-                                        accept="image/*"
-                                        onChange={async (e) => {
-                                          const file = e.target.files?.[0];
-                                          if (!file) return;
-                                          try {
-                                            const res = await adminUploadFile(file);
-                                            updateCheckoutReview(idx, { avatarUrl: res.url });
-                                          } catch (err) {
-                                            alert('Erro: ' + (err instanceof Error ? err.message : String(err)));
-                                          }
-                                        }}
-                                      />
-                                    </label>
-                                  </div>
-                                </div>
-                                <div className="md:col-span-3"><FieldLabel label="Depoimento" /><TextArea value={r.text} onChange={(v) => updateCheckoutReview(idx, { text: v })} rows={2} /></div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
                     </div>
-                  )}
+                )}
+                <div className="pt-4 border-t border-white/5">
+                    <button onClick={() => addChatMessage(part)} className="w-full py-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-xs font-bold text-white transition-colors border border-white/10 flex items-center justify-center gap-2">
+                        <Plus className="w-3 h-3" /> Nova Mensagem no Final
+                    </button>
                 </div>
-              )}
+            </div>
+        );
+    };
 
-              {tab === 'offers' && (
-                <div className="space-y-8">
-                   {([['upsells', 'Upsells'], ['downsells', 'Downsells']] as const).map(([kind, title]) => (
-                     <div key={kind} className="space-y-4">
-                       <div className="flex items-center justify-between">
-                         <h3 className="text-lg font-bold text-white">{title}</h3>
-                         <button onClick={() => addOffer(kind)} className="flex items-center gap-2 text-sm font-semibold bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl px-4 py-2">
-                           <Plus className="w-4 h-4" /> Adicionar Oferta
-                         </button>
-                       </div>
-                       
-                         {def.offers[kind].map((o, idx) => (
-                           <div
-                             key={`${o.id}-${idx}`}
-                             className="bg-neutral-950/50 border border-white/5 rounded-2xl p-5 relative animate-in fade-in duration-300"
-                           >
-                             <div className="flex items-center justify-between mb-4">
-                               <div className="font-bold text-white flex items-center gap-2">
-                                 <span className="bg-neutral-800 text-neutral-400 px-2 py-0.5 rounded text-xs">#{idx + 1}</span>
-                                 {o.title || 'Nova Oferta'}
-                               </div>
-                               <div className="flex items-center gap-1">
-                                 <button onClick={() => moveOffer(kind, idx, idx - 1)} className="p-1.5 hover:bg-white/10 rounded-lg"><ArrowUp className="w-4 h-4" /></button>
-                                 <button onClick={() => moveOffer(kind, idx, idx + 1)} className="p-1.5 hover:bg-white/10 rounded-lg"><ArrowDown className="w-4 h-4" /></button>
-                                 <button onClick={() => removeOffer(kind, idx)} className="p-1.5 hover:bg-red-500/10 text-red-400 rounded-lg"><Trash2 className="w-4 h-4" /></button>
-                               </div>
-                             </div>
+    const renderReviewsForm = () => {
+        const isGraph = editingNode?.id && isGraphNode(editingNode.id);
+        const data = isGraph ? editingNode!.data : def.reviews;
+        const items = data.items || [];
 
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><FieldLabel label="ID Interno" /><TextInput value={o.id} onChange={(v) => updateOffer(kind, idx, { id: v })} /></div>
-                                <div><FieldLabel label="ID Externo (Hotmart/Kiwify)" /><TextInput value={o.externalId || ''} onChange={(v) => updateOffer(kind, idx, { externalId: v })} placeholder="ex: PROD-123" /></div>
-                                <div><FieldLabel label="Valor (Centavos)" /><NumberInput value={Number(o.valueCents || 0)} onChange={(v) => updateOffer(kind, idx, { valueCents: v })} min={0} step={100} /></div>
-                                <div className="md:col-span-2"><FieldLabel label="Título" /><TextInput value={o.title} onChange={(v) => updateOffer(kind, idx, { title: v })} /></div>
-                               <div className="md:col-span-2"><FieldLabel label="Subtítulo" /><TextArea value={o.subtitle} onChange={(v) => updateOffer(kind, idx, { subtitle: v })} rows={2} /></div>
-                              <div className="md:col-span-2">
-                                <FieldLabel label="Mídia URL (Imagem/Vídeo)" />
-                                <div className="flex gap-2">
-                                  <TextInput value={o.mediaUrl || ''} onChange={(v) => updateOffer(kind, idx, { mediaUrl: v })} type="url" className="flex-1" />
-                                  <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
-                                    <Upload className="w-4 h-4" />
-                                    <input 
-                                      type="file" 
-                                      className="hidden" 
-                                      accept="image/*,video/*"
-                                      onChange={async (e) => {
-                                        const file = e.target.files?.[0];
-                                        if (!file) return;
-                                        try {
-                                          const res = await adminUploadFile(file);
-                                          updateOffer(kind, idx, { mediaUrl: res.url });
-                                        } catch (err) {
-                                          alert('Erro ao enviar arquivo');
-                                        }
-                                      }}
-                                    />
-                                  </label>
-                                </div>
-                              </div>
-                              <div><FieldLabel label="Preço Display" /><TextInput value={o.price} onChange={(v) => updateOffer(kind, idx, { price: v })} /></div>
-                               <div><FieldLabel label="Preço Comparação" /><TextInput value={o.compareAtPrice || ''} onChange={(v) => updateOffer(kind, idx, { compareAtPrice: v || undefined })} /></div>
-                               <div><FieldLabel label="Texto Aceitar" /><TextInput value={o.acceptText} onChange={(v) => updateOffer(kind, idx, { acceptText: v })} /></div>
-                               <div><FieldLabel label="Texto Recusar" /><TextInput value={o.declineText} onChange={(v) => updateOffer(kind, idx, { declineText: v })} /></div>
-                             </div>
-                           </div>
-                         ))}
+        const handleAdd = () => {
+            if (isGraph) {
+                const newId = (items.reduce((acc: number, r: any) => Math.max(acc, Number(r.id || 0)), 0) || 0) + 1;
+                const newItem = { id: newId, name: '', age: 30, location: '', text: '', likes: '0', comments: [] };
+                updateGraphNode(editingNode!.id!, { items: [...items, newItem] });
+            } else {
+                addReviewItem();
+            }
+        };
 
-                       {def.offers[kind].length === 0 && <div className="text-neutral-500 text-sm italic">Nenhuma oferta configurada.</div>}
-                     </div>
-                   ))}
-                </div>
-              )}
+        const handleUpdate = (idx: number, patch: any) => {
+            if (isGraph) {
+                const newItems = [...items];
+                newItems[idx] = { ...newItems[idx], ...patch };
+                updateGraphNode(editingNode!.id!, { items: newItems });
+            } else {
+                updateReviewItem(idx, patch);
+            }
+        };
 
-              {tab === 'integrations' && (
-                <div className="space-y-8">
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-bold text-white">Gateway de Pagamento</h3>
-                      <p className="text-neutral-400 text-sm">Configure o processador de pagamentos.</p>
-                    </div>
-                    <div className="bg-neutral-950/50 border border-white/5 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="md:col-span-2">
-                         <FieldLabel label="Provedor" />
-                         <Select
-                           value={def.integrations?.gateway?.provider || 'stripe'}
-                           onChange={(v) => updateIntegrations({ gateway: { ...def.integrations?.gateway, provider: v as any } })}
-                           options={[
-                             { value: 'stripe', label: 'Stripe' },
-                             { value: 'mercadopago', label: 'Mercado Pago' },
-                             { value: 'custom', label: 'Customizado' }
-                           ]}
-                         />
-                      </div>
-                      <div>
-                        <FieldLabel label="Public Key" />
-                        <TextInput value={def.integrations?.gateway?.publicKey || ''} onChange={(v) => updateIntegrations({ gateway: { ...def.integrations?.gateway, publicKey: v } as any })} placeholder="pk_..." />
-                      </div>
-                      <div>
-                        <FieldLabel label="Secret Key" />
-                        <TextInput value={def.integrations?.gateway?.secretKey || ''} onChange={(v) => updateIntegrations({ gateway: { ...def.integrations?.gateway, secretKey: v } as any })} placeholder="sk_..." type="password" />
-                      </div>
-                      <div className="md:col-span-2">
-                        <FieldLabel label="Pixel ID (Opcional)" />
-                        <TextInput value={def.integrations?.gateway?.pixelId || ''} onChange={(v) => updateIntegrations({ gateway: { ...def.integrations?.gateway, pixelId: v } as any })} />
-                      </div>
-                    </div>
-                  </div>
+        const handleRemove = (idx: number) => {
+            if (isGraph) {
+                const newItems = [...items];
+                newItems.splice(idx, 1);
+                updateGraphNode(editingNode!.id!, { items: newItems });
+            } else {
+                removeReviewItem(idx);
+            }
+        };
 
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-bold text-white">Plataformas Externas</h3>
-                      <p className="text-neutral-400 text-sm">Integração com Hotmart, Kiwify, etc.</p>
-                    </div>
-                    <div className="bg-neutral-950/50 border border-white/5 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="md:col-span-2">
-                        <Toggle 
-                          checked={def.integrations?.externalPlatform?.enabled || false}
-                          onChange={(v) => updateIntegrations({ externalPlatform: { ...def.integrations?.externalPlatform, enabled: v } as any })}
-                          label="Ativar Integração Externa"
-                        />
-                      </div>
-                      
-                      {def.integrations?.externalPlatform?.enabled && (
-                        <>
-                          <div className="md:col-span-2">
-                             <FieldLabel label="Plataforma" />
-                             <Select
-                               value={def.integrations?.externalPlatform?.provider || 'hotmart'}
-                               onChange={(v) => updateIntegrations({ externalPlatform: { ...def.integrations?.externalPlatform, provider: v as any } as any })}
-                               options={[
-                                 { value: 'hotmart', label: 'Hotmart' },
-                                 { value: 'kiwify', label: 'Kiwify' },
-                                 { value: 'perfectpay', label: 'Perfect Pay' }
-                               ]}
-                             />
-                          </div>
-                          <div>
-                            <FieldLabel label="Product ID" />
-                            <TextInput value={def.integrations?.externalPlatform?.productId || ''} onChange={(v) => updateIntegrations({ externalPlatform: { ...def.integrations?.externalPlatform, productId: v } as any })} />
-                          </div>
-                          <div>
-                            <FieldLabel label="Token / API Key" />
-                            <TextInput value={def.integrations?.externalPlatform?.token || ''} onChange={(v) => updateIntegrations({ externalPlatform: { ...def.integrations?.externalPlatform, token: v } as any })} type="password" />
-                          </div>
-                          <div className="md:col-span-2">
-                            <FieldLabel label="Webhook URL (Para receber notificações)" />
-                            <TextInput value={def.integrations?.externalPlatform?.webhookUrl || ''} onChange={(v) => updateIntegrations({ externalPlatform: { ...def.integrations?.externalPlatform, webhookUrl: v } as any })} />
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
+        const handleMove = (from: number, to: number) => {
+            if (isGraph) {
+                const newItems = moveItem(items, from, to);
+                updateGraphNode(editingNode!.id!, { items: newItems });
+            } else {
+                moveReviewItem(from, to);
+            }
+        };
 
-              {tab === 'marketing' && (
-                <div className="space-y-8">
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-bold text-white">Email Marketing</h3>
-                      <p className="text-neutral-400 text-sm">Conecte sua ferramenta de automação.</p>
-                    </div>
-                    <div className="bg-neutral-950/50 border border-white/5 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="md:col-span-2">
-                         <FieldLabel label="Provedor" />
-                         <Select
-                           value={def.marketing?.emailMarketing?.provider || 'activecampaign'}
-                           onChange={(v) => updateMarketing({ emailMarketing: { ...def.marketing?.emailMarketing, provider: v as any } })}
-                           options={[
-                             { value: 'activecampaign', label: 'ActiveCampaign' },
-                             { value: 'mailchimp', label: 'Mailchimp' },
-                             { value: 'n8n', label: 'n8n (Webhook)' },
-                             { value: 'custom', label: 'Customizado' }
-                           ]}
-                         />
-                      </div>
-                      <div>
-                        <FieldLabel label="API Key" />
-                        <TextInput value={def.marketing?.emailMarketing?.apiKey || ''} onChange={(v) => updateMarketing({ emailMarketing: { ...def.marketing?.emailMarketing, apiKey: v } as any })} type="password" />
-                      </div>
-                      <div>
-                        <FieldLabel label="List ID" />
-                        <TextInput value={def.marketing?.emailMarketing?.listId || ''} onChange={(v) => updateMarketing({ emailMarketing: { ...def.marketing?.emailMarketing, listId: v } as any })} />
-                      </div>
-                      <div className="md:col-span-2">
-                        <FieldLabel label="Webhook URL" />
+        return (
+        <div className="space-y-6">
+            {isGraph && <div className="text-xs text-purple-400 mb-2 font-mono">MODO GRAFO: NÓ {editingNode?.id}</div>}
+            <div className="flex items-center justify-between">
+                <h4 className="font-bold text-white">Avaliações ({items.length})</h4>
+                <button onClick={handleAdd} className="p-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-white text-xs font-bold flex items-center gap-1">
+                    <Plus className="w-3 h-3" /> Nova
+                </button>
+            </div>
+            <div className="space-y-4">
+                {items.map((item: any, idx: number) => (
+                    <div key={idx} className="bg-neutral-950/30 p-4 rounded-xl border border-white/5 space-y-3">
+                        <div className="flex justify-between items-center">
+                            <span className="text-xs font-mono text-neutral-500">#{idx + 1}</span>
+                            <div className="flex gap-2">
+                                <button onClick={() => handleMove(idx, idx - 1)} className="p-1 hover:bg-white/10 rounded"><ArrowUp className="w-3 h-3" /></button>
+                                <button onClick={() => handleMove(idx, idx + 1)} className="p-1 hover:bg-white/10 rounded"><ArrowDown className="w-3 h-3" /></button>
+                                <button onClick={() => handleRemove(idx)} className="p-1 hover:bg-red-500/20 text-red-400 rounded"><Trash2 className="w-3 h-3" /></button>
+                            </div>
+                        </div>
+                        <TextInput placeholder="Nome" value={item.name} onChange={(v) => handleUpdate(idx, { name: v })} />
+                        <TextArea placeholder="Texto da avaliação" value={item.text} onChange={(v) => handleUpdate(idx, { text: v })} />
                         <div className="flex gap-2">
-                          <TextInput 
-                            value={def.marketing?.emailMarketing?.webhookUrl || ''} 
-                            onChange={(v) => updateMarketing({ emailMarketing: { ...def.marketing?.emailMarketing, webhookUrl: v } as any })} 
-                            className="flex-1"
-                          />
-                          <button 
-                            onClick={async () => {
-                              if (!def.marketing?.emailMarketing?.webhookUrl) return alert('Preencha a URL primeiro');
-                              try {
-                                await fetch(def.marketing.emailMarketing.webhookUrl, { 
-                                  method: 'POST', 
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ event: 'test_ping', timestamp: new Date().toISOString() })
-                                });
-                                alert('Webhook disparado com sucesso! Verifique sua plataforma.');
-                              } catch (e) {
-                                alert('Erro ao disparar webhook (pode ser bloqueio de CORS do navegador). O servidor enviará normalmente.');
-                              }
-                            }}
-                            className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl text-xs font-bold transition-colors"
-                          >
-                            Testar
-                          </button>
+                            <TextInput placeholder="Likes" value={item.likes} onChange={(v) => handleUpdate(idx, { likes: v })} className="w-1/3" />
+                            <TextInput placeholder="Cidade/Estado" value={item.location || ''} onChange={(v) => handleUpdate(idx, { location: v })} className="flex-1" />
                         </div>
-                      </div>
+                         <div>
+                            <FieldLabel label="Avatar URL" />
+                             <div className="flex gap-2">
+                                <TextInput value={item.avatarUrl || ''} onChange={(v) => handleUpdate(idx, { avatarUrl: v })} className="flex-1" />
+                                <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
+                                <Upload className="w-4 h-4" />
+                                <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    try {
+                                        const res = await adminUploadFile(file);
+                                        handleUpdate(idx, { avatarUrl: res.url });
+                                    } catch (err) { alert('Erro ao enviar arquivo'); }
+                                }} />
+                                </label>
+                            </div>
+                        </div>
                     </div>
-                  </div>
+                ))}
+            </div>
+        </div>
+    )};
 
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-bold text-white">Recuperação de Carrinho</h3>
-                      <p className="text-neutral-400 text-sm">Envio automático para quem não completou a compra.</p>
-                    </div>
-                    <div className="bg-neutral-950/50 border border-white/5 rounded-2xl p-6 grid grid-cols-1 gap-6">
-                      <Toggle 
-                        checked={def.marketing?.abandonedCart?.enabled || false}
-                        onChange={(v) => updateMarketing({ abandonedCart: { ...def.marketing?.abandonedCart, enabled: v } as any })}
-                        label="Ativar Recuperação de Carrinho"
-                      />
-                      
-                      {def.marketing?.abandonedCart?.enabled && (
-                        <>
-                          <div>
-                            <FieldLabel label="Delay (minutos)" />
-                            <NumberInput value={def.marketing?.abandonedCart?.delayMinutes || 15} onChange={(v) => updateMarketing({ abandonedCart: { ...def.marketing?.abandonedCart, delayMinutes: v } as any })} min={1} />
-                          </div>
-                          <div>
-                            <FieldLabel label="Assunto do Email" />
-                            <TextInput value={def.marketing?.abandonedCart?.subject || ''} onChange={(v) => updateMarketing({ abandonedCart: { ...def.marketing?.abandonedCart, subject: v } as any })} />
-                          </div>
-                          <div>
-                            <FieldLabel label="Conteúdo do Email" />
-                            <TextArea value={def.marketing?.abandonedCart?.body || ''} onChange={(v) => updateMarketing({ abandonedCart: { ...def.marketing?.abandonedCart, body: v } as any })} rows={4} />
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
+    const renderOffersForm = () => {
+        const isGraph = editingNode?.id && isGraphNode(editingNode.id);
+        const data = isGraph ? editingNode!.data : def.offers;
+        const upsells = data.upsells || [];
+        const downsells = data.downsells || [];
 
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-bold text-white">Recuperação de Pedidos (Pix/Boleto)</h3>
-                      <p className="text-neutral-400 text-sm">Emails para pedidos pendentes de pagamento.</p>
-                    </div>
-                    <div className="bg-neutral-950/50 border border-white/5 rounded-2xl p-6 grid grid-cols-1 gap-6">
-                      <Toggle 
-                        checked={def.marketing?.orderRecovery?.enabled || false}
-                        onChange={(v) => updateMarketing({ orderRecovery: { ...def.marketing?.orderRecovery, enabled: v } as any })}
-                        label="Ativar Recuperação de Pedidos"
-                      />
-                      
-                      {def.marketing?.orderRecovery?.enabled && (
-                        <>
-                          <div>
-                            <FieldLabel label="Assunto do Email" />
-                            <TextInput value={def.marketing?.orderRecovery?.subject || ''} onChange={(v) => updateMarketing({ orderRecovery: { ...def.marketing?.orderRecovery, subject: v } as any })} />
-                          </div>
-                          <div>
-                            <FieldLabel label="Conteúdo do Email" />
-                            <TextArea value={def.marketing?.orderRecovery?.body || ''} onChange={(v) => updateMarketing({ orderRecovery: { ...def.marketing?.orderRecovery, body: v } as any })} rows={4} />
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
+        const handleAdd = (kind: 'upsells' | 'downsells') => {
+             if (isGraph) {
+                const list = (kind === 'upsells' ? upsells : downsells).slice();
+                list.push({
+                    id: `${kind}-${Date.now()}`,
+                    title: '',
+                    subtitle: '',
+                    price: 'R$ 0',
+                    compareAtPrice: 'R$ 0',
+                    valueCents: 0,
+                    bullets: [],
+                    acceptText: 'Aceitar',
+                    declineText: 'Recusar'
+                });
+                updateGraphNode(editingNode!.id!, { [kind]: list });
+            } else {
+                addOffer(kind);
+            }
+        };
+
+        const handleUpdate = (kind: 'upsells' | 'downsells', idx: number, patch: any) => {
+            if (isGraph) {
+                const list = (kind === 'upsells' ? upsells : downsells).slice();
+                list[idx] = { ...list[idx], ...patch };
+                updateGraphNode(editingNode!.id!, { [kind]: list });
+            } else {
+                updateOffer(kind, idx, patch);
+            }
+        };
+
+        const handleRemove = (kind: 'upsells' | 'downsells', idx: number) => {
+             if (isGraph) {
+                const list = (kind === 'upsells' ? upsells : downsells).slice();
+                list.splice(idx, 1);
+                updateGraphNode(editingNode!.id!, { [kind]: list });
+            } else {
+                removeOffer(kind, idx);
+            }
+        };
+
+        const handleMove = (kind: 'upsells' | 'downsells', from: number, to: number) => {
+             if (isGraph) {
+                const list = (kind === 'upsells' ? upsells : downsells).slice();
+                const moved = moveItem(list, from, to);
+                updateGraphNode(editingNode!.id!, { [kind]: moved });
+            } else {
+                moveOffer(kind, from, to);
+            }
+        };
+
+        return (
+        <div className="space-y-6">
+            {isGraph && <div className="text-xs text-purple-400 mb-2 font-mono">MODO GRAFO: NÓ {editingNode?.id}</div>}
+            <div className="bg-purple-500/10 border border-purple-500/20 p-4 rounded-xl">
+                <h4 className="font-bold text-white mb-2 flex items-center gap-2">
+                    <Star className="w-4 h-4 text-purple-400" />
+                    Upsells ({upsells.length})
+                </h4>
+                <div className="space-y-3">
+                    {upsells.map((offer: any, idx: number) => (
+                        <div key={offer.id || idx} className="bg-neutral-950/50 p-3 rounded-lg border border-white/5">
+                            <div className="flex justify-between mb-2">
+                                <span className="font-bold text-sm text-white">{offer.title || 'Oferta sem título'}</span>
+                                <div className="flex gap-1">
+                                    <button onClick={() => handleMove('upsells', idx, idx - 1)} className="p-1 hover:bg-white/10 rounded"><ArrowUp className="w-3 h-3" /></button>
+                                    <button onClick={() => handleMove('upsells', idx, idx + 1)} className="p-1 hover:bg-white/10 rounded"><ArrowDown className="w-3 h-3" /></button>
+                                    <button onClick={() => handleRemove('upsells', idx)} className="p-1 hover:bg-red-500/20 text-red-400 rounded"><Trash2 className="w-3 h-3" /></button>
+                                </div>
+                            </div>
+                            <TextInput placeholder="Título" value={offer.title} onChange={(v) => handleUpdate('upsells', idx, { title: v })} className="mb-2" />
+                            <TextInput placeholder="Preço" value={offer.price} onChange={(v) => handleUpdate('upsells', idx, { price: v })} />
+                        </div>
+                    ))}
+                    <button onClick={() => handleAdd('upsells')} className="w-full py-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-xs font-bold text-white transition-colors border border-white/10">
+                        + Adicionar Upsell
+                    </button>
                 </div>
-              )}
             </div>
-          </div>
+
+             <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl">
+                <h4 className="font-bold text-white mb-2 flex items-center gap-2">
+                    <ArrowDown className="w-4 h-4 text-blue-400" />
+                    Downsells ({downsells.length})
+                </h4>
+                <div className="space-y-3">
+                    {downsells.map((offer: any, idx: number) => (
+                        <div key={offer.id || idx} className="bg-neutral-950/50 p-3 rounded-lg border border-white/5">
+                            <div className="flex justify-between mb-2">
+                                <span className="font-bold text-sm text-white">{offer.title || 'Oferta sem título'}</span>
+                                <div className="flex gap-1">
+                                    <button onClick={() => handleMove('downsells', idx, idx - 1)} className="p-1 hover:bg-white/10 rounded"><ArrowUp className="w-3 h-3" /></button>
+                                    <button onClick={() => handleMove('downsells', idx, idx + 1)} className="p-1 hover:bg-white/10 rounded"><ArrowDown className="w-3 h-3" /></button>
+                                    <button onClick={() => handleRemove('downsells', idx)} className="p-1 hover:bg-red-500/20 text-red-400 rounded"><Trash2 className="w-3 h-3" /></button>
+                                </div>
+                            </div>
+                            <TextInput placeholder="Título" value={offer.title} onChange={(v) => handleUpdate('downsells', idx, { title: v })} className="mb-2" />
+                            <TextInput placeholder="Preço" value={offer.price} onChange={(v) => handleUpdate('downsells', idx, { price: v })} />
+                        </div>
+                    ))}
+                    <button onClick={() => handleAdd('downsells')} className="w-full py-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-xs font-bold text-white transition-colors border border-white/10">
+                        + Adicionar Downsell
+                    </button>
+                </div>
+            </div>
+        </div>
+    )};
+
+    const renderCheckoutForm = () => {
+        const isGraph = editingNode?.id && isGraphNode(editingNode.id);
+        const data = isGraph ? editingNode!.data : def.checkout;
+        const update = isGraph 
+            ? (patch: any) => updateGraphNode(editingNode!.id!, patch)
+            : updateCheckout;
+
+        return (
+        <div className="space-y-6">
+            {isGraph && <div className="text-xs text-purple-400 mb-2 font-mono">MODO GRAFO: NÓ {editingNode?.id}</div>}
+            <div className="bg-neutral-950/30 p-4 rounded-xl border border-white/5">
+                <h4 className="font-bold text-white mb-2">Produto</h4>
+                <div className="space-y-4">
+                    <TextInput placeholder="Nome do Produto" value={data.productName} onChange={(v) => update({ productName: v })} />
+                    <TextInput placeholder="Preço (Display)" value={data.price} onChange={(v) => update({ price: v })} />
+                    <NumberInput placeholder="Valor (Centavos)" value={data.valueCents} onChange={(v) => update({ valueCents: v })} />
+                </div>
+            </div>
+            {/* Simplified Checkout Editor for MVP - user can click 'Enable Pagebuilder' in the old UI, but here we just show basic fields or a button to open advanced mode if needed */}
+            <div className="p-4 bg-yellow-500/10 rounded-xl text-yellow-200 text-xs">
+                Para editar os blocos do checkout (Pagebuilder), utilize a visualização detalhada ou implemente os nós de blocos no futuro.
+            </div>
+        </div>
+    )};
+
+    const renderDelayForm = () => {
+        if (!editingNode?.id) return null;
+        const data = editingNode.data;
+        const update = (patch: any) => updateGraphNode(editingNode.id!, patch);
+
+        return (
+            <div className="space-y-6">
+                <div className="text-xs text-purple-400 mb-2 font-mono">MODO GRAFO: NÓ {editingNode.id}</div>
+                <div>
+                    <FieldLabel label="Duração (ms)" />
+                    <NumberInput value={data.duration || 1000} onChange={(v) => update({ duration: v })} step={500} min={0} />
+                    <p className="text-xs text-neutral-500 mt-1">1000ms = 1 segundo</p>
+                </div>
+            </div>
+        );
+    };
+
+    const renderConditionForm = () => {
+        if (!editingNode?.id) return null;
+        const data = editingNode.data;
+        const update = (patch: any) => updateGraphNode(editingNode.id!, patch);
+
+        return (
+            <div className="space-y-6">
+                <div className="text-xs text-purple-400 mb-2 font-mono">MODO GRAFO: NÓ {editingNode.id}</div>
+                <div className="p-4 bg-blue-500/10 rounded-xl text-blue-200 text-sm">
+                    Este nó avaliará uma condição. Use as saídas (edges) para definir o caminho "Verdadeiro" e "Falso".
+                </div>
+                <div>
+                    <FieldLabel label="Variável" />
+                    <TextInput placeholder="ex: user_age" value={data.variable || ''} onChange={(v) => update({ variable: v })} />
+                </div>
+                <div>
+                    <FieldLabel label="Operador" />
+                    <Select 
+                        value={data.operator || 'equals'} 
+                        onChange={(v) => update({ operator: v })} 
+                        options={[
+                            { value: 'equals', label: 'Igual (==)' },
+                            { value: 'not_equals', label: 'Diferente (!=)' },
+                            { value: 'greater_than', label: 'Maior que (>)' },
+                            { value: 'less_than', label: 'Menor que (<)' },
+                            { value: 'contains', label: 'Contém' },
+                            { value: 'exists', label: 'Existe (não vazio)' }
+                        ]} 
+                    />
+                </div>
+                {data.operator !== 'exists' && (
+                    <div>
+                        <FieldLabel label="Valor de Comparação" />
+                        <TextInput placeholder="Valor" value={data.value || ''} onChange={(v) => update({ value: v })} />
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    const renderUserInputForm = () => {
+        if (!editingNode?.id) return null;
+        const data = editingNode.data;
+        const update = (patch: any) => updateGraphNode(editingNode.id!, patch);
+
+        return (
+            <div className="space-y-6">
+                <div className="text-xs text-purple-400 mb-2 font-mono">MODO GRAFO: NÓ {editingNode.id}</div>
+                <div>
+                    <FieldLabel label="Nome da Variável (para salvar)" />
+                    <TextInput placeholder="ex: user_name" value={data.variable || ''} onChange={(v) => update({ variable: v })} />
+                </div>
+                <div>
+                    <FieldLabel label="Tipo de Entrada" />
+                    <Select 
+                        value={data.inputType || 'text'} 
+                        onChange={(v) => update({ inputType: v })} 
+                        options={[
+                            { value: 'text', label: 'Texto Livre' },
+                            { value: 'email', label: 'E-mail' },
+                            { value: 'phone', label: 'Telefone' },
+                            { value: 'number', label: 'Número' },
+                            { value: 'date', label: 'Data' }
+                        ]} 
+                    />
+                </div>
+                <div>
+                    <FieldLabel label="Placeholder" />
+                    <TextInput placeholder="Digite aqui..." value={data.placeholder || ''} onChange={(v) => update({ placeholder: v })} />
+                </div>
+                <Toggle label="Obrigatório" checked={data.required !== false} onChange={(v) => update({ required: v })} />
+            </div>
+        );
+    };
+
+    const renderApiActionForm = () => {
+        if (!editingNode?.id) return null;
+        const data = editingNode.data;
+        const update = (patch: any) => updateGraphNode(editingNode.id!, patch);
+
+        return (
+            <div className="space-y-6">
+                <div className="text-xs text-purple-400 mb-2 font-mono">MODO GRAFO: NÓ {editingNode.id}</div>
+                <div>
+                    <FieldLabel label="URL do Endpoint" />
+                    <TextInput placeholder="https://api.exemplo.com/v1/webhook" value={data.url || ''} onChange={(v) => update({ url: v })} />
+                </div>
+                <div>
+                    <FieldLabel label="Método" />
+                    <Select 
+                        value={data.method || 'POST'} 
+                        onChange={(v) => update({ method: v })} 
+                        options={[
+                            { value: 'GET', label: 'GET' },
+                            { value: 'POST', label: 'POST' },
+                            { value: 'PUT', label: 'PUT' },
+                            { value: 'DELETE', label: 'DELETE' }
+                        ]} 
+                    />
+                </div>
+                <div>
+                    <FieldLabel label="Headers (JSON)" />
+                    <TextArea 
+                        placeholder='{"Authorization": "Bearer token"}' 
+                        value={typeof data.headers === 'string' ? data.headers : JSON.stringify(data.headers || {}, null, 2)} 
+                        onChange={(v) => {
+                            try {
+                                const parsed = JSON.parse(v);
+                                update({ headers: parsed });
+                            } catch (e) {
+                                // Allow typing invalid JSON temporarily or handle string storage
+                                update({ headers: v }); // Store as string if user prefers, or handle validation
+                            }
+                        }} 
+                        rows={3} 
+                    />
+                </div>
+                <div>
+                    <FieldLabel label="Corpo / Body (JSON)" />
+                    <TextArea 
+                        placeholder='{"foo": "bar"}' 
+                        value={typeof data.body === 'string' ? data.body : JSON.stringify(data.body || {}, null, 2)} 
+                        onChange={(v) => {
+                             try {
+                                const parsed = JSON.parse(v);
+                                update({ body: parsed });
+                            } catch (e) {
+                                update({ body: v });
+                            }
+                        }} 
+                        rows={4} 
+                    />
+                </div>
+                <div>
+                    <FieldLabel label="Salvar Resposta em Variável" />
+                    <TextInput placeholder="ex: api_response" value={data.resultVariable || ''} onChange={(v) => update({ resultVariable: v })} />
+                </div>
+            </div>
+        );
+    };
+
+    const renderRedirectForm = () => {
+        if (!editingNode?.id) return null;
+        const data = editingNode.data;
+        const update = (patch: any) => updateGraphNode(editingNode.id!, patch);
+
+        return (
+            <div className="space-y-6">
+                <div className="text-xs text-purple-400 mb-2 font-mono">MODO GRAFO: NÓ {editingNode.id}</div>
+                <div>
+                    <FieldLabel label="URL de Redirecionamento" />
+                    <TextInput placeholder="https://..." value={data.url || ''} onChange={(v) => update({ url: v })} />
+                </div>
+                <Toggle label="Abrir em nova aba" checked={data.newTab || false} onChange={(v) => update({ newTab: v })} />
+            </div>
+        );
+    };
+
+    const renderIncomingCallForm = () => {
+        if (!editingNode?.id) return null;
+        const data = editingNode.data;
+        const update = (patch: any) => updateGraphNode(editingNode.id!, patch);
+
+        return (
+            <div className="space-y-6">
+                <div className="text-xs text-purple-400 mb-2 font-mono">MODO GRAFO: NÓ {editingNode.id}</div>
+                <div>
+                    <FieldLabel label="Duração do Toque (ms)" />
+                    <NumberInput value={data.duration || 15000} onChange={(v) => update({ duration: v })} step={1000} />
+                </div>
+                <div>
+                    <FieldLabel label="Ringtone URL" />
+                    <div className="flex gap-2">
+                        <TextInput value={data.ringtoneUrl || ''} onChange={(v) => update({ ringtoneUrl: v })} className="flex-1" />
+                        <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
+                            <Upload className="w-4 h-4" />
+                            <input type="file" className="hidden" accept="audio/*" onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                try {
+                                    const res = await adminUploadFile(file);
+                                    update({ ringtoneUrl: res.url });
+                                } catch (err) { alert('Erro ao enviar arquivo'); }
+                            }} />
+                        </label>
+                    </div>
+                </div>
+                 <div>
+                    <FieldLabel label="Voz da Doutora (opcional)" />
+                    <div className="flex gap-2">
+                        <TextInput value={data.voiceUrl || ''} onChange={(v) => update({ voiceUrl: v })} className="flex-1" />
+                        <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
+                            <Upload className="w-4 h-4" />
+                            <input type="file" className="hidden" accept="audio/*" onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                try {
+                                    const res = await adminUploadFile(file);
+                                    update({ voiceUrl: res.url });
+                                } catch (err) { alert('Erro ao enviar arquivo'); }
+                            }} />
+                        </label>
+                    </div>
+                </div>
+                <Toggle label="Iniciar Vídeo Automaticamente ao Atender" checked={data.autoStartVideo !== false} onChange={(v) => update({ autoStartVideo: v })} />
+            </div>
+        );
+    };
+
+    const renderVideoCallForm = () => {
+        if (!editingNode?.id) return null;
+        const data = editingNode.data;
+        const update = (patch: any) => updateGraphNode(editingNode.id!, patch);
+
+        return (
+             <div className="space-y-6">
+                <div className="text-xs text-purple-400 mb-2 font-mono">MODO GRAFO: NÓ {editingNode.id}</div>
+                <div>
+                    <FieldLabel label="Duração (ms)" />
+                    <NumberInput value={data.duration || 60000} onChange={(v) => update({ duration: v })} step={1000} />
+                </div>
+                 <div>
+                    <FieldLabel label="Vídeo URL" />
+                    <div className="flex gap-2">
+                        <TextInput value={data.videoUrl || ''} onChange={(v) => update({ videoUrl: v })} className="flex-1" />
+                        {/* 
+                        <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
+                            <Upload className="w-4 h-4" />
+                            <input type="file" className="hidden" accept="video/*" onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                try {
+                                    const res = await adminUploadFile(file);
+                                    update({ videoUrl: res.url });
+                                } catch (err) { alert('Erro ao enviar arquivo'); }
+                            }} />
+                        </label> 
+                        */}
+                    </div>
+                    <div className="mt-2 px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-yellow-400 text-xs text-center">
+                        Para vídeos, utilize apenas URLs externas (YouTube, Vimeo, Panda, etc).
+                    </div>
+                </div>
+                 <div>
+                    <FieldLabel label="Áudio URL (opcional)" />
+                    <div className="flex gap-2">
+                        <TextInput value={data.audioUrl || ''} onChange={(v) => update({ audioUrl: v })} className="flex-1" />
+                        <label className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl cursor-pointer transition-colors text-xs font-semibold border border-white/10 shrink-0">
+                            <Upload className="w-4 h-4" />
+                            <input type="file" className="hidden" accept="audio/*" onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                // VALIDATION: Check file size (limit to 50MB)
+                                const MAX_SIZE_MB = 50;
+                                if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+                                    alert(`Arquivo muito grande! O limite é de ${MAX_SIZE_MB}MB.`);
+                                    e.target.value = ''; // Reset input
+                                    return;
+                                }
+                                try {
+                                    const res = await adminUploadFile(file);
+                                    update({ audioUrl: res.url });
+                                } catch (err) { alert('Erro ao enviar arquivo'); }
+                            }} />
+                        </label>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const renderUpsellForm = () => {
+        if (!editingNode?.id) return null;
+        const data = editingNode.data;
+        const update = (patch: any) => updateGraphNode(editingNode.id!, patch);
+
+        return (
+            <div className="space-y-6">
+                <div className="text-xs text-purple-400 mb-2 font-mono">MODO GRAFO: NÓ {editingNode.id}</div>
+                <div className="bg-neutral-950/30 p-4 rounded-xl border border-white/5 space-y-4">
+                    <TextInput placeholder="Título" value={data.title} onChange={(v) => update({ title: v })} />
+                    <TextInput placeholder="Subtítulo" value={data.subtitle} onChange={(v) => update({ subtitle: v })} />
+                    <div className="flex gap-2">
+                        <TextInput placeholder="Preço (Display)" value={data.price} onChange={(v) => update({ price: v })} className="flex-1" />
+                        <NumberInput placeholder="Centavos" value={data.valueCents} onChange={(v) => update({ valueCents: v })} className="w-1/3" />
+                    </div>
+                     <TextInput placeholder="Texto Botão Aceitar" value={data.acceptText || 'Sim, eu quero'} onChange={(v) => update({ acceptText: v })} />
+                     <TextInput placeholder="Texto Botão Recusar" value={data.declineText || 'Não, obrigado'} onChange={(v) => update({ declineText: v })} />
+                </div>
+            </div>
+        );
+    };
+
+    const handleAddNode = (type: string, payload: any, position?: { x: number, y: number }) => {
+        if (!draftDef) return;
+
+        const newNodeId = nanoid();
+        const defaultPosition = position || { x: 0, y: 0 };
+
+        setDraftDef((prev) => {
+            if (!prev) return prev;
+
+            // Prepare default data based on type
+            let data = { ...payload, label: payload.label || type };
+            
+            if (['chat-message', 'message', 'text'].includes(type)) {
+                data = { sender: 'doctor', type: 'text', content: '', delay: 1000, ...data };
+            } else if (type === 'image' || type === 'video' || type === 'audio') {
+                data = { sender: 'doctor', type: type, content: '', delay: 1000, ...data };
+            } else if (type === 'delay') {
+                data = { duration: 1000, ...data };
+            } else if (type === 'condition') {
+                 data = { operator: 'equals', ...data };
+            } else if (type === 'user_input') {
+                 data = { inputType: 'text', required: true, ...data };
+            } else if (type === 'api_action') {
+                 data = { method: 'POST', ...data };
+            } else if (type === 'reviews') {
+                 data = { items: [], ...data };
+            } else if (type === 'checkout') {
+                 data = { productName: 'Produto', price: 'R$ 0,00', ...data };
+            } else if (type === 'offers') {
+                 data = { upsells: [], downsells: [], ...data };
+            }
+
+            // 1. Add to generic nodes (Graph Mode)
+            const newNode = {
+                id: newNodeId,
+                type: type,
+                data: data,
+                position: defaultPosition
+            };
+
+            const currentNodes = prev.nodes || [];
+            const newNodes = [...currentNodes, newNode];
+
+            // 2. Legacy Compatibility (Chat Messages)
+            // We append to part2 to ensure it exists in the legacy linear flow for now.
+            // Future: The execution engine should read from 'nodes' and 'edges'.
+            let newChat = { ...prev.chat };
+            const isChatType = ['chat-message', 'message', 'text', 'audio', 'image', 'video'].includes(type);
+            
+            if (isChatType) { 
+                const part = 'part2';
+                const list = [...newChat[part]];
+                
+                // Determine message type
+                let msgType = payload.messageType || 'text';
+                if (['audio', 'image', 'video'].includes(type)) {
+                    msgType = type;
+                }
+
+                list.push({
+                    id: newNodeId, // Use stable ID
+                    sender: payload.sender || 'doctor',
+                    delay: payload.delay || 1000,
+                    type: msgType, 
+                    content: payload.content || ''
+                });
+                newChat[part] = list;
+            }
+
+            return {
+                ...prev,
+                nodes: newNodes,
+                chat: newChat,
+                layout: {
+                    ...(prev.layout || {}),
+                    [newNodeId]: defaultPosition
+                }
+            };
+        });
+
+        // Set as editing
+        setEditingNode({ type, data: payload, id: newNodeId } as any);
+    };
+
+    return (
+      <div className={cn(
+          "flex gap-6 overflow-hidden transition-all",
+          isZenMode ? "flex-1 h-full" : "h-[calc(100vh-140px)]"
+      )}>
+        {/* Main Canvas */}
+        <div className={cn(
+            "flex-1 bg-neutral-900 overflow-hidden border border-white/5 relative shadow-2xl transition-all",
+            isZenMode ? "rounded-none border-0" : "rounded-3xl"
+        )}>
+           <FlowEditor 
+             funnelDefinition={def} 
+             onSave={(newDef) => setDraftDef(newDef)}
+             onNodeClick={(type, data, id) => setEditingNode({ type, data, id })}
+             onAddNode={handleAddNode}
+           />
         </div>
 
-        <div className="space-y-6 xl:sticky xl:top-6 h-fit">
-          <div className="hidden xl:block">
-            <div className="flex items-center justify-between mb-4 px-2">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                Preview
-              </h3>
-              <div className="flex bg-neutral-900 rounded-lg p-1 border border-white/10">
-                <button 
-                  onClick={() => setPreviewDevice('mobile')}
-                  className={cn(
-                    "p-1.5 rounded-md transition-all",
-                    previewDevice === 'mobile' ? "bg-purple-600 text-white shadow-lg" : "text-neutral-400 hover:text-white"
-                  )}
-                  title="Mobile"
-                >
-                  <Smartphone className="w-4 h-4" />
-                </button>
-                <button 
-                  onClick={() => setPreviewDevice('desktop')}
-                  className={cn(
-                    "p-1.5 rounded-md transition-all",
-                    previewDevice === 'desktop' ? "bg-purple-600 text-white shadow-lg" : "text-neutral-400 hover:text-white"
-                  )}
-                  title="Desktop"
-                >
-                  <Monitor className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-            <FunnelPreview def={def} tab={tab} device={previewDevice} />
-          </div>
-
-          <div className="bg-neutral-900/30 backdrop-blur-md border border-white/5 rounded-3xl overflow-hidden">
-            <button 
-              onClick={() => setShowJsonMobile(!showJsonMobile)}
-            className="w-full p-6 flex items-center justify-between font-bold text-white xl:cursor-default hover:bg-white/5 xl:hover:bg-transparent transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <Tag className="w-4 h-4 text-purple-400" />
-              Prévia do JSON
-            </div>
-            <ChevronDown className={cn("w-5 h-5 text-neutral-400 transition-transform xl:hidden", showJsonMobile ? "rotate-180" : "")} />
-          </button>
-
-          <div className={cn("px-6 pb-6 relative group", showJsonMobile ? "block" : "hidden xl:block")}>
-            <pre className="text-[10px] leading-relaxed text-neutral-400 bg-neutral-950/50 border border-white/5 rounded-xl p-4 overflow-x-auto max-h-[600px] scrollbar-thin scrollbar-thumb-neutral-800">
-              {safeStringify(def)}
-            </pre>
-            <div className="absolute top-2 right-8 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button 
-                onClick={() => navigator.clipboard.writeText(safeStringify(def))}
-                className="bg-white/10 hover:bg-white/20 text-white text-xs px-2 py-1 rounded backdrop-blur-md"
-              >
-                Copiar
-              </button>
-            </div>
-          </div>
+        {/* Edit Panel (Sidebar) */}
+        <div className={cn(
+            "bg-neutral-900 border border-white/5 flex flex-col transition-all duration-300 shadow-2xl",
+            isZenMode ? "rounded-l-3xl h-full border-y-0 border-r-0 my-0" : "rounded-3xl",
+            editingNode ? "w-[400px] opacity-100 translate-x-0" : "w-0 opacity-0 translate-x-10 overflow-hidden"
+        )}>
+            {editingNode && (
+                <>
+                    <div className="p-5 border-b border-white/5 flex items-center justify-between bg-neutral-950/50">
+                        <div className="flex items-center gap-2">
+                            <Settings className="w-4 h-4 text-purple-400" />
+                            <h3 className="font-bold text-white uppercase tracking-wider text-sm">
+                                {editingNode.type === 'doctor' && 'Doutora'}
+                                {editingNode.type === 'audio' && 'Áudio'}
+                                {editingNode.type === 'incoming-call' && 'Chamada'}
+                                {editingNode.type === 'video-call' && 'Vídeo VSL'}
+                                {['chat-message', 'message', 'text', 'image', 'video'].includes(editingNode.type) && 'Mensagem'}
+                                {editingNode.type === 'checkout' && 'Checkout'}
+                                {editingNode.type === 'reviews' && 'Reviews'}
+                                {editingNode.type === 'offers' && 'Upsell / Downsell'}
+                                {editingNode.type === 'delay' && 'Delay / Espera'}
+                                {editingNode.type === 'condition' && 'Condição'}
+                                {editingNode.type === 'user_input' && 'Entrada de Dados'}
+                                {editingNode.type === 'api_action' && 'Ação de API'}
+                                {editingNode.type === 'redirect' && 'Redirecionamento'}
+                                {editingNode.type === 'end' && 'Fim'}
+                            </h3>
+                             {isGraphNode(editingNode.id) && (
+                                <button
+                                    onClick={() => setStartNode(editingNode.id!)}
+                                    disabled={editingNode.id === def.startNodeId}
+                                    className={cn(
+                                        "ml-2 px-2 py-1 rounded text-[10px] font-bold transition-colors uppercase tracking-wider border",
+                                        editingNode.id === def.startNodeId
+                                            ? "bg-green-500/10 text-green-400 border-green-500/20 cursor-default"
+                                            : "bg-neutral-800 text-neutral-400 border-white/10 hover:text-white hover:bg-neutral-700 hover:border-white/20"
+                                    )}
+                                    title={editingNode.id === def.startNodeId ? "Este é o nó inicial" : "Definir como nó inicial"}
+                                >
+                                    {editingNode.id === def.startNodeId ? "Início" : "Definir Início"}
+                                </button>
+                            )}
+                        </div>
+                        <button onClick={() => setEditingNode(null)} className="p-2 hover:bg-white/10 rounded-xl transition-colors">
+                            <X className="w-5 h-5 text-neutral-400" />
+                        </button>
+                    </div>
+                    
+                    <div className="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-6">
+                        {editingNode.type === 'doctor' && renderDoctorForm()}
+                        {editingNode.type === 'incoming-call' && renderIncomingCallForm()}
+                        {editingNode.type === 'video-call' && renderVideoCallForm()}
+                        {['chat-message', 'message', 'text', 'image', 'video', 'audio'].includes(editingNode.type) && renderChatMessageForm(editingNode.data)}
+                        {editingNode.type === 'checkout' && renderCheckoutForm()}
+                        {editingNode.type === 'reviews' && renderReviewsForm()}
+                        {editingNode.type === 'offers' && renderOffersForm()}
+                        {editingNode.type === 'upsell' && renderUpsellForm()}
+                        {editingNode.type === 'delay' && renderDelayForm()}
+                        {editingNode.type === 'condition' && renderConditionForm()}
+                        {editingNode.type === 'user_input' && renderUserInputForm()}
+                        {editingNode.type === 'api_action' && renderApiActionForm()}
+                        {editingNode.type === 'redirect' && renderRedirectForm()}
+                        {editingNode.type === 'end' && <div className="text-neutral-400 text-sm">Este nó finaliza o fluxo. Nenhuma configuração necessária.</div>}
+                    </div>
+                </>
+            )}
         </div>
-      </div>
       </div>
     );
   };
 
   return (
     <div 
-      className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 max-w-[1600px] mx-auto animate-in fade-in duration-500"
+      className={cn(
+        "animate-in fade-in duration-500",
+        isZenMode ? "fixed inset-0 z-50 bg-neutral-950 flex flex-col" : "p-6 w-full mx-auto"
+      )}
     >
-      {/* Sidebar List */}
-      <div className="hidden lg:flex lg:col-span-3 bg-neutral-900/50 backdrop-blur-xl border border-white/5 rounded-3xl p-6 flex-col h-[calc(100vh-120px)] sticky top-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white tracking-tight">Seus Funis</h2>
-          <button
-            onClick={create}
-            disabled={creating}
-            className="p-2 bg-white text-black rounded-xl hover:bg-neutral-200 transition-colors disabled:opacity-50"
-            title="Novo Funil"
-          >
-            {creating ? <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : <Plus className="w-5 h-5" />}
-          </button>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-neutral-800">
-          <div className="space-y-2">
-            {funnels.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setActiveId(f.id)}
-                className={cn(
-                  "w-full text-left rounded-2xl p-4 border transition-all relative group overflow-hidden animate-in fade-in slide-in-from-left-4 duration-300",
-                  f.id === activeId 
-                    ? "bg-neutral-800/80 border-purple-500/50 shadow-lg shadow-purple-900/10" 
-                    : "bg-neutral-950/30 border-white/5 hover:bg-neutral-900/50 hover:border-white/10"
-                )}
-              >
-                {f.id === activeId && (
-                  <div
-                    className="absolute left-0 top-0 bottom-0 w-1 bg-purple-500 animate-in fade-in duration-300"
-                  />
-                )}
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className={cn("font-semibold truncate text-sm", f.id === activeId ? "text-white" : "text-neutral-300")}>{f.name}</span>
-                  <div className={cn(
-                    "w-2 h-2 rounded-full",
-                    f.status === 'active' ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : "bg-neutral-700"
-                  )} />
-                </div>
-                <div className="flex items-center justify-between text-xs text-neutral-500">
-                  <span>v{f.version}</span>
-                  <span className="uppercase tracking-wider">{f.status}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-          {funnels.length === 0 && (
-            <div className="text-center py-10 text-neutral-500 text-sm">
-              Nenhum funil encontrado.
-              <br />
-              Crie um para começar.
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Main Editor Area */}
-      <div className="lg:col-span-9 bg-neutral-900/30 backdrop-blur-xl border border-white/5 rounded-3xl p-6 min-h-[calc(100vh-120px)] flex flex-col relative overflow-hidden">
-        {/* Background Mesh Gradient */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-[100px] pointer-events-none -z-10" />
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[100px] pointer-events-none -z-10" />
-
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-white mb-1">Editor de Funil</h1>
-            <p className="text-neutral-400 text-sm">Gerencie o conteúdo e configurações do seu funil de vendas.</p>
-          </div>
-          
-          <div className="flex items-center gap-3 bg-neutral-950/50 p-1.5 rounded-2xl border border-white/5">
-            <button
-              onClick={() => {
-                if (mode === 'builder' && draftDef) {
-                  setDraftJson(safeStringify(draftDef));
-                }
-                setMode((m) => (m === 'builder' ? 'json' : 'builder'));
-              }}
-              className="px-4 py-2 rounded-xl text-sm font-semibold bg-neutral-800 hover:bg-neutral-700 text-white transition-colors"
-            >
-              {mode === 'builder' ? 'Modo JSON' : 'Modo Visual'}
-            </button>
-            <div className="w-px h-6 bg-white/10" />
-            <button
-              onClick={saveDefinition}
-              disabled={!active || saving}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-white text-black hover:bg-neutral-200 disabled:opacity-50 transition-colors shadow-lg shadow-white/5"
-            >
-              {saving ? <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
-              Salvar
-            </button>
-            <button
-              onClick={activate}
-              disabled={!active || saving}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all",
-                active?.status === 'active' 
-                  ? "bg-green-500/10 text-green-400 border border-green-500/20 cursor-default"
-                  : "bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-900/20"
-              )}
-            >
-              {active?.status === 'active' ? <Check className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-              {active?.status === 'active' ? 'Ativo' : 'Ativar'}
-            </button>
-          </div>
-        </div>
-
-        {error && (
-          <div 
-            className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-200 text-sm flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300"
-          >
-            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            {error}
-          </div>
-        )}
-
-        <div className="mb-8 p-6 bg-neutral-950/30 border border-white/5 rounded-2xl">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <FieldLabel label="Nome Interno do Funil" />
-              <TextInput value={nameDraft} onChange={setNameDraft} placeholder="Ex: Funil VSL 01" className="text-lg font-semibold" />
-            </div>
-            <div className="flex items-end justify-end gap-3 pb-1">
-               {active && (
-                 <div className="flex items-center gap-4 text-xs font-mono text-neutral-500 bg-neutral-900/50 px-3 py-2 rounded-lg border border-white/5">
-                   <span>ID: {active.id.slice(0, 8)}...</span>
-                   <span>VER: {active.version}</span>
-                   <span>UPDATED: {new Date().toLocaleDateString()}</span>
-                 </div>
+      {!activeId ? (
+          renderFunnelList()
+      ) : (
+          <div className={cn("flex flex-col", isZenMode ? "h-full" : "gap-6")}>
+               {!isZenMode && (
+                   <button onClick={() => setActiveId(null)} className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors self-start px-4 py-2 hover:bg-white/5 rounded-xl">
+                       <ArrowLeft className="w-5 h-5" />
+                       Voltar para Lista de Funis
+                   </button>
                )}
-               <button
-                 onClick={deleteFunnel}
-                 disabled={!active || saving}
-                 className="text-xs font-semibold text-red-400 hover:text-red-300 underline decoration-red-900/50 hover:decoration-red-400 transition-all mr-4"
-               >
-                 Excluir Funil
-               </button>
-               <button
-                 onClick={() => {
-                   if (!active) return;
-                   const def = ensureDefinition(active.definition);
-                   setDraftDef(cloneDeep(def));
-                   setDraftJson(safeStringify(def));
-                   setNameDraft(active.name);
-                   setError(null);
-                 }}
-                 disabled={!active || saving}
-                 className="text-xs font-semibold text-neutral-400 hover:text-white underline decoration-neutral-700 hover:decoration-white transition-all"
-               >
-                 Descartar alterações
-               </button>
-            </div>
-          </div>
-        </div>
 
-        {mode === 'builder' ? (
-          renderBuilder()
-        ) : (
-          <div 
-            className="flex-1 flex flex-col animate-in fade-in duration-300"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-sm text-neutral-400">Edite a estrutura bruta do funil. Cuidado com a sintaxe.</div>
-              <button
-                onClick={() => {
-                  try {
-                    const parsed = ensureDefinition(JSON.parse(draftJson) as FunnelDefinition);
-                    setDraftDef(cloneDeep(parsed));
-                    setDraftJson(safeStringify(parsed));
-                    setError(null);
-                    setMode('builder');
-                  } catch (e) {
-                    setError(e instanceof Error ? e.message : 'JSON inválido');
-                  }
-                }}
-                className="text-sm font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-xl px-4 py-2 transition-colors shadow-lg shadow-purple-900/20"
-              >
-                Aplicar e Voltar
-              </button>
-            </div>
-            <textarea
-              value={draftJson}
-              onChange={(e) => setDraftJson(e.target.value)}
-              className="flex-1 w-full bg-neutral-950 border border-white/10 rounded-2xl p-6 font-mono text-sm text-neutral-300 outline-none focus:ring-2 focus:ring-purple-500/30 resize-none leading-relaxed"
-              spellCheck={false}
-            />
-          </div>
-        )}
-      {/* Mobile Sticky Action Bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-neutral-900/90 backdrop-blur-xl border-t border-white/10 z-50 flex items-center justify-between gap-3 safe-area-pb">
-        <button
-          onClick={() => {
-            if (mode === 'builder' && draftDef) {
-              setDraftJson(safeStringify(draftDef));
-            }
-            setMode((m) => (m === 'builder' ? 'json' : 'builder'));
-          }}
-          className="px-4 py-3 rounded-xl text-sm font-semibold bg-neutral-800 text-white flex-1 border border-white/5"
-        >
-          {mode === 'builder' ? 'JSON' : 'Visual'}
-        </button>
-        <button
-          onClick={saveDefinition}
-          disabled={!active || saving}
-          className="px-4 py-3 rounded-xl text-sm font-bold bg-white text-black flex-[2] flex items-center justify-center gap-2 shadow-lg shadow-white/5"
-        >
-          {saving ? <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
-          Salvar
-        </button>
-        <button
-          onClick={activate}
-          disabled={!active || saving}
-          className={cn(
-            "px-4 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center border",
-            active?.status === 'active' 
-              ? "bg-green-500/10 text-green-400 border-green-500/20 w-14"
-              : "bg-green-600 border-green-500 text-white w-14 shadow-lg shadow-green-900/20"
-          )}
-        >
-          {active?.status === 'active' ? <Check className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-        </button>
-      </div>
+              <div className={cn(
+                  "bg-neutral-900/30 backdrop-blur-xl border border-white/5 rounded-3xl p-6 flex flex-col relative overflow-hidden transition-all duration-300",
+                  isZenMode ? "flex-1 rounded-none border-0 p-0" : "min-h-[calc(100vh-120px)]"
+              )}>
+                {/* Background Mesh Gradient */}
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-[100px] pointer-events-none -z-10" />
+                <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[100px] pointer-events-none -z-10" />
 
-      </div>
+                <div className={cn("flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 z-10", isZenMode && "p-4 bg-neutral-900 border-b border-white/5 mb-0")}>
+                  <div>
+                    <h1 className="text-2xl font-bold text-white mb-1">
+                        {active?.name}
+                        {isZenMode && <span className="ml-2 text-xs font-normal text-neutral-500 bg-neutral-800 px-2 py-0.5 rounded-full">Zen Mode</span>}
+                    </h1>
+                    {!isZenMode && <p className="text-neutral-400 text-sm">Gerencie o conteúdo e configurações do seu funil de vendas.</p>}
+                  </div>
+                  
+                  <div className="flex items-center gap-3 bg-neutral-950/50 p-1.5 rounded-2xl border border-white/5">
+                    <button
+                        onClick={() => setIsZenMode(!isZenMode)}
+                        className={cn(
+                            "px-3 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2",
+                            isZenMode ? "bg-purple-500/20 text-purple-300" : "bg-neutral-800 hover:bg-neutral-700 text-white"
+                        )}
+                        title="Alternar Modo Tela Cheia"
+                    >
+                        <Layout className="w-4 h-4" />
+                        {isZenMode ? 'Sair do Zen' : 'Tela Cheia'}
+                    </button>
+
+                    <div className="w-px h-6 bg-white/10" />
+
+                    <button
+                      onClick={() => {
+                        if (mode === 'builder' && draftDef) {
+                          setDraftJson(safeStringify(draftDef));
+                        }
+                        setMode((m) => (m === 'builder' ? 'json' : 'builder'));
+                      }}
+                      className="px-4 py-2 rounded-xl text-sm font-semibold bg-neutral-800 hover:bg-neutral-700 text-white transition-colors"
+                    >
+                      {mode === 'builder' ? 'Modo JSON' : 'Modo Visual'}
+                    </button>
+                    <div className="w-px h-6 bg-white/10" />
+                    <button
+                      onClick={saveDefinition}
+                      disabled={!active || saving}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-white text-black hover:bg-neutral-200 disabled:opacity-50 transition-colors shadow-lg shadow-white/5"
+                    >
+                      {saving ? <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
+                      Salvar
+                    </button>
+                    <button
+                      onClick={activate}
+                      disabled={!active || saving}
+                      className={cn(
+                        "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all",
+                        active?.status === 'active' 
+                          ? "bg-green-500/10 text-green-400 border border-green-500/20 cursor-default"
+                          : "bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-900/20"
+                      )}
+                    >
+                      {active?.status === 'active' ? <Check className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                      {active?.status === 'active' ? 'Ativo' : 'Ativar'}
+                    </button>
+                  </div>
+                </div>
+
+                {error && (
+                  <div 
+                    className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-200 text-sm flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300"
+                  >
+                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                    {error}
+                  </div>
+                )}
+
+                <div className="mb-8 p-6 bg-neutral-950/30 border border-white/5 rounded-2xl">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <FieldLabel label="Nome Interno do Funil" />
+                      <TextInput value={nameDraft} onChange={setNameDraft} placeholder="Ex: Funil VSL 01" className="text-lg font-semibold" />
+                    </div>
+                    <div className="flex items-end justify-end gap-3 pb-1">
+                      {active && (
+                        <div className="flex items-center gap-4 text-xs font-mono text-neutral-500 bg-neutral-900/50 px-3 py-2 rounded-lg border border-white/5">
+                          <span>ID: {active.id.slice(0, 8)}...</span>
+                          <span>VER: {active.version}</span>
+                          <span>UPDATED: {new Date().toLocaleDateString()}</span>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => deleteFunnel()}
+                        disabled={!active || saving}
+                        className="text-xs font-semibold text-red-400 hover:text-red-300 underline decoration-red-900/50 hover:decoration-red-400 transition-all mr-4"
+                      >
+                        Excluir Funil
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (!active) return;
+                          const def = ensureDefinition(active.definition);
+                          setDraftDef(cloneDeep(def));
+                          setDraftJson(safeStringify(def));
+                          setNameDraft(active.name);
+                          setError(null);
+                        }}
+                        disabled={!active || saving}
+                        className="text-xs font-semibold text-neutral-400 hover:text-white underline decoration-neutral-700 hover:decoration-white transition-all"
+                      >
+                        Descartar alterações
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {mode === 'builder' ? (
+                  renderBuilder()
+                ) : (
+                  <div 
+                    className="flex-1 flex flex-col animate-in fade-in duration-300"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="text-sm text-neutral-400">Edite a estrutura bruta do funil. Cuidado com a sintaxe.</div>
+                      <button
+                        onClick={() => {
+                          try {
+                            const parsed = ensureDefinition(JSON.parse(draftJson) as FunnelDefinition);
+                            setDraftDef(cloneDeep(parsed));
+                            setDraftJson(safeStringify(parsed));
+                            setError(null);
+                            setMode('builder');
+                          } catch (e) {
+                            setError(e instanceof Error ? e.message : 'JSON inválido');
+                          }
+                        }}
+                        className="text-sm font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-xl px-4 py-2 transition-colors shadow-lg shadow-purple-900/20"
+                      >
+                        Aplicar e Voltar
+                      </button>
+                    </div>
+                    <textarea
+                      value={draftJson}
+                      onChange={(e) => setDraftJson(e.target.value)}
+                      className="flex-1 w-full bg-neutral-950 border border-white/10 rounded-2xl p-6 font-mono text-sm text-neutral-300 outline-none focus:ring-2 focus:ring-purple-500/30 resize-none leading-relaxed"
+                      spellCheck={false}
+                    />
+                  </div>
+                )}
+              {/* Mobile Sticky Action Bar */}
+              <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-neutral-900/90 backdrop-blur-xl border-t border-white/10 z-50 flex items-center justify-between gap-3 safe-area-pb">
+                <button
+                  onClick={() => {
+                    if (mode === 'builder' && draftDef) {
+                      setDraftJson(safeStringify(draftDef));
+                    }
+                    setMode((m) => (m === 'builder' ? 'json' : 'builder'));
+                  }}
+                  className="px-4 py-3 rounded-xl text-sm font-semibold bg-neutral-800 text-white flex-1 border border-white/5"
+                >
+                  {mode === 'builder' ? 'JSON' : 'Visual'}
+                </button>
+                <button
+                  onClick={saveDefinition}
+                  disabled={!active || saving}
+                  className="px-4 py-3 rounded-xl text-sm font-bold bg-white text-black flex-[2] flex items-center justify-center gap-2 shadow-lg shadow-white/5"
+                >
+                  {saving ? <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
+                  Salvar
+                </button>
+                <button
+                  onClick={activate}
+                  disabled={!active || saving}
+                  className={cn(
+                    "px-4 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center border",
+                    active?.status === 'active' 
+                      ? "bg-green-500/10 text-green-400 border-green-500/20 w-14"
+                      : "bg-green-600 border-green-500 text-white w-14 shadow-lg shadow-green-900/20"
+                  )}
+                >
+                  {active?.status === 'active' ? <Check className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                </button>
+              </div>
+
+              </div>
+          </div>
+      )}
 
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">

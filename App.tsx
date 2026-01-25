@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { ScreenStep, ChatMessage, PublicFunnelResponse, FunnelDefinition, OfferConfig } from './types';
+import { ScreenStep, ChatMessage, PublicFunnelResponse, FunnelDefinition, OfferConfig, FlowNode } from './types';
 import { cn } from './lib/utils';
+import { GraphEngine } from './lib/graph-engine';
 import IncomingCall from './components/IncomingCall';
 import LockScreen from './components/LockScreen';
 import ChatInterface from './components/ChatInterface';
@@ -17,6 +18,10 @@ import AdminOverview from './components/admin/AdminOverview';
 import AdminFunnels from './components/admin/AdminFunnels';
 import AdminLeads from './components/admin/AdminLeads';
 import AdminUsers from './components/admin/AdminUsers';
+import AdminEmailMarketing from './components/admin/AdminEmailMarketing';
+import AdminWebhooks from './components/admin/AdminWebhooks';
+import AdminPlan from './components/admin/AdminPlan';
+import AdminWhatsapp from './components/admin/AdminWhatsapp';
 
 const ScreenWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="w-full h-full animate-in fade-in duration-500 fill-mode-forwards">
@@ -128,6 +133,148 @@ const FunnelExperience: React.FC = () => {
   const [orderValueCents, setOrderValueCents] = useState(0);
   const [offerPointer, setOfferPointer] = useState<{ kind: 'upsell' | 'downsell'; index: number } | null>(null);
 
+  // Graph Mode State
+  const [graphMode, setGraphMode] = useState(false);
+  const [engine, setEngine] = useState<GraphEngine | null>(null);
+  const [currentNode, setCurrentNode] = useState<FlowNode | null>(null);
+
+  const handleGraphNext = useCallback((output?: string) => {
+      if (!engine) return;
+      const nextNode = engine.next(output);
+      setCurrentNode(nextNode);
+  }, [engine]);
+
+
+  const handleStepTransition = useCallback((nextStep: ScreenStep) => {
+    setCurrentStep(nextStep);
+  }, []);
+
+  // Sync Graph Node to ScreenStep
+  useEffect(() => {
+     if (!graphMode || !currentNode) return;
+
+     // Handle logic nodes that don't render a screen
+     if (currentNode.type === 'redirect') {
+         if (currentNode.data.url) {
+             window.location.href = currentNode.data.url;
+             return; // Stop execution
+         }
+         handleGraphNext(); // Skip if no URL
+         return;
+     }
+
+     if (currentNode.type === 'condition') {
+         const { variable, operator, value } = currentNode.data;
+         const varValue = engine?.getVariable(variable);
+         
+         let result = false;
+         if (operator === 'equals') result = varValue == value;
+         else if (operator === 'not_equals') result = varValue != value;
+         else if (operator === 'contains') result = String(varValue || '').includes(value);
+         else if (operator === 'greater_than') result = Number(varValue) > Number(value);
+         else if (operator === 'less_than') result = Number(varValue) < Number(value);
+         
+         setTimeout(() => handleGraphNext(result ? 'true' : 'false'), 0);
+         return;
+     }
+
+     if (currentNode.type === 'api_action') {
+         // Mock API Action
+         console.log('Executing API Action:', currentNode.data);
+         setTimeout(() => handleGraphNext('success'), 500);
+         return;
+     }
+
+     if (currentNode.type === 'delay') {
+         const duration = currentNode.data.duration || 1000;
+         setTimeout(() => handleGraphNext(), duration);
+         return;
+     }
+
+     if (currentNode.type === 'start') {
+         setTimeout(() => handleGraphNext(), 100); // Small delay to ensure smooth transition
+         return;
+     }
+
+     switch (currentNode.type) {
+       case 'incoming_call':
+       case 'incoming-call':
+         handleStepTransition(ScreenStep.INCOMING_CALL);
+         break;
+       case 'lock_screen':
+       case 'lock-screen':
+         handleStepTransition(ScreenStep.LOCK_SCREEN);
+         break;
+       case 'video_call':
+       case 'video-call':
+         handleStepTransition(ScreenStep.VIDEO_CALL);
+         break;
+       case 'reviews':
+         handleStepTransition(ScreenStep.REVIEWS);
+         break;
+       case 'checkout':
+         handleStepTransition(ScreenStep.CHECKOUT);
+         break;
+       case 'upsell':
+        handleStepTransition(ScreenStep.UPSELL);
+        break;
+      case 'offers':
+         // Graph node 'offers' usually contains a list. We might need to start the offers flow.
+         // For now, let's map it to UPSELL screen and let it handle logic.
+         // Or maybe the graph should have individual nodes for each offer?
+         // The 'offers' node in AdminFunnels (line 1509) allows adding multiple upsells/downsells.
+         // If the node type is 'offers', we treat it as starting the offers sequence.
+         handleStepTransition(ScreenStep.UPSELL);
+         break;
+       case 'end':
+         handleStepTransition(ScreenStep.THANK_YOU);
+         break;
+       default:
+         // message, image, video, audio, user_input
+         // We use CHAT_PART_1 as the generic "Chat Screen" for the graph
+         handleStepTransition(ScreenStep.CHAT_PART_1);
+         break;
+     }
+   }, [currentNode, graphMode, handleStepTransition, handleGraphNext, engine]);
+
+  // Convert FlowNode to ChatMessage for ChatInterface
+  const currentGraphMessage = useMemo((): ChatMessage | null => {
+      if (!currentNode) return null;
+      
+      // Map generic nodes to ChatMessage
+      if (['message', 'image', 'video', 'audio', 'user_input'].includes(currentNode.type) || ['chat-message', 'text'].includes(currentNode.type)) {
+          // Robust content recovery: check fullMessage first, then direct content
+          const fullMsg = currentNode.data.fullMessage || {};
+          const content = fullMsg.content || currentNode.data.content || '';
+          
+          // Robust mediaUrl recovery
+          const mediaUrl = fullMsg.mediaUrl || currentNode.data.url || currentNode.data.mediaUrl;
+          
+          // Robust requiresInput check
+          // It is required if:
+          // 1. Node type is user_input
+          // 2. data.requiresInput is true
+          // 3. fullMessage.requiresInput is true
+          const requiresInput = currentNode.type === 'user_input' || 
+                                !!currentNode.data.requiresInput || 
+                                !!fullMsg.requiresInput;
+
+          return {
+              id: currentNode.id,
+              content: content,
+              type: (currentNode.type === 'message' || currentNode.type === 'user_input' || currentNode.type === 'chat-message') ? 'text' : (currentNode.type as any),
+              sender: currentNode.type === 'user_input' ? 'doctor' : 'doctor',
+              mediaUrl: mediaUrl,
+              delay: fullMsg.delay || currentNode.data.delay || 0,
+              requiresInput: requiresInput,
+              action: currentNode.data.action, 
+              quickReplies: fullMsg.quickReplies || currentNode.data.quickReplies
+          };
+      }
+      return null;
+  }, [currentNode]);
+
+
   const visitorId = useMemo(() => getVisitorId(), []);
 
   useEffect(() => {
@@ -137,6 +284,17 @@ const FunnelExperience: React.FC = () => {
         const loaded = await fetchPublicFunnel();
         if (cancelled) return;
         setFunnel(loaded);
+
+        // Initialize Graph Engine if nodes are present
+        if (loaded.definition.nodes && loaded.definition.nodes.length > 0) {
+            const newEngine = new GraphEngine(loaded.definition);
+            setGraphMode(true);
+            setEngine(newEngine);
+            setCurrentNode(newEngine.start());
+        } else {
+            setGraphMode(false);
+        }
+
       } catch (e) {
         if (cancelled) return;
         setLoadError(e instanceof Error ? e.message : 'erro_ao_carregar');
@@ -167,10 +325,6 @@ const FunnelExperience: React.FC = () => {
   useEffect(() => {
     track('session_start', undefined, { path: location.pathname });
   }, [track]);
-
-  const handleStepTransition = useCallback((nextStep: ScreenStep) => {
-    setCurrentStep(nextStep);
-  }, []);
 
   useEffect(() => {
     track('step_view', currentStep);
@@ -278,11 +432,15 @@ const FunnelExperience: React.FC = () => {
             <IncomingCall 
               doctorName={doctorName}
               doctorAvatarUrl={doctorAvatarUrl}
-              duration={incomingCallConfig?.duration}
-              ringtoneUrl={incomingCallConfig?.ringtoneUrl}
-              voiceUrl={incomingCallConfig?.voiceUrl}
+              duration={graphMode && currentNode?.data ? currentNode.data.duration : incomingCallConfig?.duration}
+              ringtoneUrl={graphMode && currentNode?.data ? currentNode.data.ringtoneUrl : incomingCallConfig?.ringtoneUrl}
+              voiceUrl={graphMode && currentNode?.data ? currentNode.data.voiceUrl : incomingCallConfig?.voiceUrl}
               theme={theme}
               onAnswer={() => {
+             if (graphMode) {
+                 handleGraphNext();
+                 return;
+             }
              if (incomingCallConfig?.autoStartVideo) {
                handleStepTransition(ScreenStep.VIDEO_CALL);
              } else {
@@ -298,7 +456,13 @@ const FunnelExperience: React.FC = () => {
             <LockScreen 
               doctorName={doctorName}
               wallpaperUrl={wallpaperUrl}
-              onUnlock={() => handleStepTransition(ScreenStep.CHAT_PART_1)} 
+              onUnlock={() => {
+                  if (graphMode) {
+                      handleGraphNext();
+                  } else {
+                      handleStepTransition(ScreenStep.CHAT_PART_1);
+                  }
+              }} 
               theme={theme}
             />
           </ScreenWrapper>
@@ -309,26 +473,59 @@ const FunnelExperience: React.FC = () => {
             <ChatInterface 
               doctorName={doctorName}
               doctorAvatarUrl={doctorAvatarUrl}
-              script={chatPart1}
-              initialHistory={[]}
+              script={graphMode ? [] : chatPart1}
+              initialHistory={graphMode ? chatHistory : []}
               startDelay={1500}
               onHistoryUpdate={handleHistoryUpdate}
-              onAction={handleChatPart1Action}
-              onUserMessage={(text) => track('user_message', ScreenStep.CHAT_PART_1, { text })}
+              onAction={(action) => {
+                  if (graphMode) {
+                      handleGraphNext(action);
+                  } else {
+                      handleChatPart1Action(action);
+                  }
+              }}
+              onUserMessage={(text) => {
+                track('user_message', ScreenStep.CHAT_PART_1, { text });
+                
+                // Handle Graph Mode User Input
+                if (graphMode) {
+                    if (currentNode?.type === 'user_input') {
+                        const varName = currentNode.data.variable;
+                        if (varName && engine) {
+                            engine.setVariable(varName, text);
+                        }
+                    }
+                    // Advance graph for both user_input AND chat-message with requiresInput
+                    // We pass the text as output in case edges are conditional based on reply
+                    handleGraphNext(text);
+                }
+              }}
               theme={theme}
+              currentMessage={graphMode ? currentGraphMessage : undefined}
+              onMessageComplete={graphMode ? () => handleGraphNext() : undefined}
             />
           </ScreenWrapper>
         );
       case ScreenStep.VIDEO_CALL:
+        // DEBUG: Ensure video URL is valid
+        const finalVideoUrl = currentNode?.data?.url || currentNode?.data?.videoUrl || videoCallConfig?.videoUrl;
+        
         return (
           <ScreenWrapper key={ScreenStep.VIDEO_CALL}>
             <VideoCall 
               doctorName={doctorName}
               doctorAvatarUrl={doctorAvatarUrl}
-              videoUrl={videoCallConfig?.videoUrl}
+              videoUrl={finalVideoUrl}
               audioUrl={videoCallConfig?.audioUrl}
               duration={videoCallConfig?.duration}
-              onEndCall={() => handleStepTransition(ScreenStep.CHAT_PART_2)} 
+              onEndCall={() => {
+                  console.log('Video Call Ended');
+                  if (graphMode) {
+                      handleGraphNext();
+                  } else {
+                      handleStepTransition(ScreenStep.CHAT_PART_2);
+                  }
+              }} 
             />
           </ScreenWrapper>
         );
@@ -354,21 +551,27 @@ const FunnelExperience: React.FC = () => {
             </ScreenWrapper>
         );
       case ScreenStep.REVIEWS:
+        // FIX: Ensure reviews items are correctly loaded from graph node data
+        const reviewItems = graphMode && currentNode?.type === 'reviews' 
+            ? (currentNode.data.items || []) 
+            : reviews;
+            
         return (
           <ScreenWrapper key={ScreenStep.REVIEWS}>
             <TikTokReviews 
-              reviews={reviews}
-              onFinish={() => handleStepTransition(ScreenStep.CHECKOUT)}
+              reviews={reviewItems}
+              onFinish={() => graphMode ? handleGraphNext() : handleStepTransition(ScreenStep.CHECKOUT)}
               theme={theme}
             />
           </ScreenWrapper>
         );
       case ScreenStep.CHECKOUT:
+        const checkoutData = graphMode ? (currentNode?.data as any) : checkoutConfig;
         return (
           <ScreenWrapper key={ScreenStep.CHECKOUT}>
-            {checkoutConfig ? (
+            {checkoutData ? (
               <Checkout
-                config={checkoutConfig}
+                config={checkoutData}
                 integrations={definition.integrations}
                 theme={theme}
                 onCheckoutStart={() => {
@@ -379,8 +582,14 @@ const FunnelExperience: React.FC = () => {
                     await upsertLeadContact({ visitorId, ...contact }).catch(() => {});
                   }
                   track('conversion', ScreenStep.CHECKOUT, { contactProvided: Boolean(contact) });
-                  track('purchase', ScreenStep.CHECKOUT, { valueCents: checkoutConfig.valueCents });
-                  setOrderValueCents(Number(checkoutConfig.valueCents || 0));
+                  track('purchase', ScreenStep.CHECKOUT, { valueCents: checkoutData.valueCents });
+                  setOrderValueCents(Number(checkoutData.valueCents || 0));
+                  
+                  if (graphMode) {
+                      handleGraphNext('success');
+                      return;
+                  }
+
                   if (upsells.length > 0) {
                     setOfferPointer({ kind: 'upsell', index: 0 });
                     handleStepTransition(ScreenStep.UPSELL);
@@ -398,6 +607,32 @@ const FunnelExperience: React.FC = () => {
           </ScreenWrapper>
         );
       case ScreenStep.UPSELL: {
+        if (graphMode) {
+            const offer = currentNode?.data as OfferConfig;
+            if (!offer) return <div />;
+             return (
+              <ScreenWrapper key={currentNode?.id || 'upsell'}>
+                <OfferScreen
+                  title="Oferta Especial"
+                  subtitle="Só agora"
+                  offer={offer}
+                  onAccept={() => {
+                     // Tracking logic duplicated or refactored? 
+                     // For brevity, just tracking basic accept
+                     track('offer_accept', ScreenStep.UPSELL, { offerId: offer.id, kind: 'upsell', valueCents: offer.valueCents });
+                     setOrderValueCents((v) => v + Number(offer.valueCents || 0));
+                     handleGraphNext('accepted');
+                  }}
+                  onDecline={() => {
+                     track('offer_decline', ScreenStep.UPSELL, { offerId: offer.id, kind: 'upsell' });
+                     handleGraphNext('declined');
+                  }}
+                  theme={theme}
+                />
+              </ScreenWrapper>
+            );
+        }
+
         if (!offerPointer || offerPointer.kind !== 'upsell') return <div />;
         const offer = upsells[offerPointer.index];
         if (!offer) return <div />;
@@ -446,6 +681,30 @@ const FunnelExperience: React.FC = () => {
         );
       }
       case ScreenStep.DOWNSELL: {
+        if (graphMode) {
+             const offer = currentNode?.data as OfferConfig;
+             if (!offer) return <div />;
+             return (
+              <ScreenWrapper key={currentNode?.id || 'downsell'}>
+                <OfferScreen
+                  title="Última chance"
+                  subtitle="Não perca"
+                  offer={offer}
+                  onAccept={() => {
+                     track('offer_accept', ScreenStep.DOWNSELL, { offerId: offer.id, kind: 'downsell', valueCents: offer.valueCents });
+                     setOrderValueCents((v) => v + Number(offer.valueCents || 0));
+                     handleGraphNext('accepted');
+                  }}
+                  onDecline={() => {
+                     track('offer_decline', ScreenStep.DOWNSELL, { offerId: offer.id, kind: 'downsell' });
+                     handleGraphNext('declined');
+                  }}
+                  theme={theme}
+                />
+              </ScreenWrapper>
+             );
+        }
+
         if (!offerPointer || offerPointer.kind !== 'downsell') return <div />;
         const offer = downsells[offerPointer.index];
         if (!offer) return <div />;
@@ -492,8 +751,13 @@ const FunnelExperience: React.FC = () => {
                 setOrderValueCents(0);
                 setOfferPointer(null);
                 setChatHistory([]);
-                handleStepTransition(ScreenStep.INCOMING_CALL);
-                track('restart', ScreenStep.THANK_YOU);
+                if (graphMode && engine) {
+                    setCurrentNode(engine.start());
+                    track('restart', ScreenStep.THANK_YOU);
+                } else {
+                    handleStepTransition(ScreenStep.INCOMING_CALL);
+                    track('restart', ScreenStep.THANK_YOU);
+                }
               }}
             />
           </ScreenWrapper>
@@ -562,6 +826,10 @@ const App: React.FC = () => {
           <Route path="funnels" element={<AdminFunnels />} />
           <Route path="leads" element={<AdminLeads />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="email-marketing" element={<AdminEmailMarketing />} />
+          <Route path="whatsapp" element={<AdminWhatsapp />} />
+          <Route path="webhooks" element={<AdminWebhooks />} />
+          <Route path="plan" element={<AdminPlan />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

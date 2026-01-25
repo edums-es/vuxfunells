@@ -1,0 +1,2423 @@
+{
+  "doctor": {
+    "name": "Dra. Gabriela Soares",
+    "role": "Especialista em Fertilidade",
+    "avatarUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/L-iUtirAW9D5zohYCjFZa.jpeg",
+    "wallpaperUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/X8mT3kmBOj5AdXaUJUAeI.jpg"
+  },
+  "chat": {
+    "part1": [
+      {
+        "id": "1",
+        "type": "audio",
+        "content": "0:05",
+        "sender": "doctor",
+        "delay": 1500,
+        "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/Z22Dq_ckMWTWHBy82yDUX.mp3"
+      },
+      {
+        "id": "2",
+        "type": "audio",
+        "content": "0;20",
+        "sender": "doctor",
+        "delay": 1000,
+        "requiresInput": true,
+        "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/2EI04onBKkReUj8AluD1K.mp3"
+      },
+      {
+        "id": "4",
+        "type": "audio",
+        "content": "0:16",
+        "sender": "doctor",
+        "delay": 1500,
+        "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/Qk6wgEfuUoTbHQcmaWRro.mp3"
+      },
+      {
+        "id": "3",
+        "type": "text",
+        "content": "Quantos anos você tem hoje?",
+        "sender": "doctor",
+        "delay": 2000,
+        "requiresInput": true
+      },
+      {
+        "id": "5",
+        "type": "audio",
+        "content": "0:10",
+        "sender": "doctor",
+        "delay": 1000,
+        "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/KP7m2gsO1dbhrHTzefpVM.mp3"
+      },
+      {
+        "id": "6",
+        "type": "audio",
+        "content": "0:21",
+        "sender": "doctor",
+        "delay": 2500,
+        "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/SMIr3YK1IKiF5EHxtTDH7.mp3"
+      },
+      {
+        "id": "7",
+        "type": "image",
+        "content": "responde pra mim se você já teve alguns desses tipo de sintomas confirmado ou não!",
+        "sender": "doctor",
+        "delay": 2000,
+        "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/-4e5wv5K-oSwQM-bJ4204.png",
+        "requiresInput": true
+      },
+      {
+        "id": "1769068297874",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "text",
+        "content": "entendo..\nSeu ciclo menstrual é regular?\n",
+        "quickReplies": [
+          {
+            "label": "SIM",
+            "value": "SIM"
+          },
+          {
+            "label": "NÃO",
+            "value": "NÃO"
+          }
+        ],
+        "requiresInput": true
+      },
+      {
+        "id": "1769068389467",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "text",
+        "content": "\n🤔 Você fez Laqueadura?",
+        "requiresInput": true,
+        "quickReplies": [
+          {
+            "label": "SIM",
+            "value": "SIM"
+          },
+          {
+            "label": "NÃO",
+            "value": "NÃO"
+          }
+        ]
+      },
+      {
+        "id": "1769068419051",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "audio",
+        "content": "0:13",
+        "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/3eK-uJdHO-hPZbPnvsD9r.mp3"
+      },
+      {
+        "id": "1769068525540",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "audio",
+        "content": "0:36",
+        "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/pcWwW-6vpJqgmRTV3zhVs.mp3"
+      },
+      {
+        "id": "1769068589386",
+        "sender": "doctor",
+        "delay": 2000,
+        "type": "image",
+        "content": "olha eu vou te ligar por chamada de vídeo pra explicar pra você a sua situação de forma mais clara! ",
+        "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/RirNkZgO3MviFZTwU6Uva.png"
+      },
+      {
+        "id": "1769140115419",
+        "sender": "doctor",
+        "delay": 2500,
+        "type": "text",
+        "content": "Quero que você entenda da melhor forma tudo que eu analisei sobre você. "
+      },
+      {
+        "id": "1769140153174",
+        "sender": "doctor",
+        "delay": 1500,
+        "type": "text",
+        "content": "Mais fique tranquila, (você não vai aparecer)"
+      },
+      {
+        "id": "1769141477750",
+        "sender": "doctor",
+        "delay": 2500,
+        "type": "text",
+        "content": " Apenas escute com atenção e carinho pois isso pode ser tudo que você procurava pra te ajudar a engravidar de forma saudável e segura!  "
+      },
+      {
+        "id": "1769140154977",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "text",
+        "content": "posso ligar?",
+        "quickReplies": [
+          {
+            "label": "SIM",
+            "value": "SIM"
+          }
+        ],
+        "requiresInput": true
+      }
+    ],
+    "part2": [
+      {
+        "id": "10",
+        "type": "text",
+        "content": "Você REALMENTE quer a receita, e finalmente conseguir engravidar?\n",
+        "sender": "doctor",
+        "delay": 1000,
+        "requiresInput": true,
+        "quickReplies": [
+          {
+            "label": "SIM",
+            "value": "SIM"
+          }
+        ]
+      },
+      {
+        "id": "11",
+        "type": "audio",
+        "content": "0:35",
+        "sender": "doctor",
+        "delay": 1500,
+        "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/t5y7wyNaNk29TgRZvMRxD.mp3"
+      },
+      {
+        "id": "12",
+        "type": "text",
+        "content": "Antes de te mandar acesso aos vídeos de depoimentos me informe aqui o seu numero de WhatsApp!",
+        "sender": "doctor",
+        "delay": 2000
+      },
+      {
+        "id": "1769148343496",
+        "sender": "doctor",
+        "delay": 1500,
+        "type": "text",
+        "content": "🚨 (ESCREVA DA FORMA CORRETA POIS SERA POR LA QUE EU TE MANDAREI A RECEITA É O PASSO A PASSO CORRETO EXCLUSIVO PRA VOCÊ!)  🚨        ",
+        "requiresInput": true
+      },
+      {
+        "id": "13",
+        "type": "text",
+        "content": "Então bora resolver isso amiga!\n   ",
+        "sender": "doctor",
+        "delay": 2500,
+        "action": "open_reviews"
+      },
+      {
+        "id": "1769148343054",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "text",
+        "content": "Quantas vezes você já ouviu falar que é tarde demais..."
+      },
+      {
+        "id": "1769068276253",
+        "sender": "doctor",
+        "delay": 2000,
+        "type": "text",
+        "content": "A verdade é que seu corpo não desistiu de você, ele só precisa do estímulo certo.\n"
+      },
+      {
+        "id": "1769071602177",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "text",
+        "content": "🌿 Este método natural já ajudou centenas de mulheres a realizarem o sonho da maternidade."
+      },
+      {
+        "id": "1769071625353",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "text",
+        "content": "\nE agora, pode ser a sua vez.\n"
+      },
+      {
+        "id": "1769071647145",
+        "sender": "doctor",
+        "delay": 2000,
+        "type": "text",
+        "content": "essa receita da garrafada para gravidez, vai devolver sua fertilidade e principalmente aumentar o afeto entre você e seu parceiro💞                   "
+      },
+      {
+        "id": "1769071676619",
+        "sender": "doctor",
+        "delay": 2000,
+        "type": "image",
+        "content": " O valor da receita da garrafada natural, junto com o meu acompanhamento, (ERA) R$ 497,00",
+        "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/CLYZzFlFjF4j22fy35W2s.jpeg"
+      },
+      {
+        "id": "1769071760146",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "text",
+        "content": "Mas você não vai pagar nem perto disso..."
+      },
+      {
+        "id": "1769071771498",
+        "sender": "doctor",
+        "delay": 3000,
+        "type": "text",
+        "content": "\nSó hoje! te Libero o acesso completo e todo meu cuidado profissional por apenas R$ 97,00 no pix ou cartão de credito.\n"
+      },
+      {
+        "id": "1769071827689",
+        "sender": "doctor",
+        "delay": 1500,
+        "type": "text",
+        "content": "Mas olha 😯 Essa condição de R$ 97 é só para as próximas 20 pessoas, tá?\n            "
+      },
+      {
+        "id": "1769071870809",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "text",
+        "content": "\nja foram 18 pessoas até agora e você ainda tem tempo ⏰\n"
+      },
+      {
+        "id": "1769071901841",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "image",
+        "content": "",
+        "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/-rmwO5xax0grmQkI7p66p.jpeg"
+      },
+      {
+        "id": "1769071924817",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "image",
+        "content": "Mesmo com laqueadura, endometriose, miomas ou ovários policísticos... mulheres estão realizando o sonho de ser mãe com esse chá natural e poderoso!",
+        "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/NX2o1ZwAv_JsuBAXLa3oU.jpeg"
+      },
+      {
+        "id": "1769071994315",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "audio",
+        "content": "0:15",
+        "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/QXUq0OiJ--ldiv1rBn2c2.mp3"
+      },
+      {
+        "id": "1769072030889",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "text",
+        "content": "\nAmiga não deixe o Tempo passar mais\n"
+      },
+      {
+        "id": "1769072152361",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "text",
+        "content": "quanto mais tempo demorar pra você ter seu filho(a)"
+      },
+      {
+        "id": "1769072160425",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "text",
+        "content": "menor a chance de ter 💔😔\n"
+      },
+      {
+        "id": "1769072168099",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "text",
+        "content": "\n✨ Não deixe o tempo levar o que ainda pode ser seu."
+      },
+      {
+        "id": "1769072261682",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "image",
+        "content": "então aproveite agora essa oportunidade que Deus está te dando 🙏",
+        "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/Vw_OrHiFUP1PsVtNpR0v3.png"
+      },
+      {
+        "id": "1769072309899",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "text",
+        "content": "Vou deixar uma opção caso você queira ver algumas provas sócias, caso não queira pode clicar em \"EU VOU ENGRAVIDAR\" ",
+        "quickReplies": [
+          {
+            "label": "🤰 EU VOU ENGRAVIDAR 🤰",
+            "value": "🤰 EU VOU ENGRAVIDAR 🤰"
+          },
+          {
+            "label": "🤱🏻 FEEDBAAK DE CASOS REAIS 🤱🏻",
+            "value": "🤱🏻 FEEDBAAK DE CASOS REAIS 🤱🏻"
+          }
+        ]
+      },
+      {
+        "id": "1769072558753",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "text",
+        "content": "são 5 vídeos curtos, no final deles terá um botão pra você ter acesso ao caminho certo, ao caminho seguro!\nveja os vídeos ou pule pro ultimo pra ter acesso! te vejo jaja."
+      }
+    ]
+  },
+  "videoCall": {
+    "videoUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/a2OZS4nqxscfHKqAfmG81.mp4",
+    "duration": 114
+  },
+  "incomingCall": {
+    "duration": 91,
+    "autoStartVideo": false,
+    "ringtoneUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/XOCt-ilkr0MYq9e6aM5Re.mp3",
+    "voiceUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/udDdY7znoqwysYKbX6u_n.mp3"
+  },
+  "reviews": {
+    "items": [
+      {
+        "id": 1,
+        "name": "Mariana S.",
+        "age": 32,
+        "location": "São Paulo, SP",
+        "text": "Depois de 3 anos tentando e 2 FIVs falhas, eu achei que meu útero tinha algum problema. Segui o passo a passo da Dra. Ana e em 4 meses o positivo veio! 😭❤️",
+        "likes": "12.4K",
+        "videoUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/8DVz6kr6ba2c8m_2uLBhf.mp4",
+        "comments": [
+          {
+            "user": "jessica_t",
+            "text": "Nossa, meu médico nunca falou isso. Faz todo sentido!",
+            "time": "2m",
+            "likes": 12,
+            "avatarId": 50
+          },
+          {
+            "user": "mamae_ansiosa",
+            "text": "Estou chorando aqui, me deu esperança ❤️",
+            "time": "5m",
+            "likes": 45,
+            "avatarId": 51
+          },
+          {
+            "user": "pri_tentante",
+            "text": "Parabéns Mari! Vou começar hoje.",
+            "time": "1h",
+            "likes": 8,
+            "avatarId": 52
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "name": "Cláudia R.",
+        "age": 48,
+        "location": "Curitiba, PR",
+        "text": "Meu médico disse que pela minha idade seria improvável. O método mudou minha vida, minha disposição e me deu meu maior presente.",
+        "likes": "18.9K",
+        "videoUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/qkWVo-laX6LHgP--sYY9k.mp4",
+        "comments": [
+          {
+            "user": "brunna_fer",
+            "text": "Idade é só um número quando a saúde tá em dia!",
+            "time": "12m",
+            "likes": 120,
+            "avatarId": 60
+          },
+          {
+            "user": "luciana.p",
+            "text": "Tenho 39 e estava desanimada. Obrigada por postar.",
+            "time": "30m",
+            "likes": 34,
+            "avatarId": 61
+          },
+          {
+            "user": "carol_s",
+            "text": "Que depoimento lindo.",
+            "time": "2h",
+            "likes": 11,
+            "avatarId": 62
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "name": "Patrícia L.",
+        "age": 29,
+        "location": "Belo Horizonte, MG",
+        "text": "Eu tinha SOP severa. Menstruava 2x por ano. Regulei meu ciclo em 60 dias com a alimentação do protocolo. Grávida de 12 semanas! 🙏",
+        "likes": "22.1K",
+        "videoUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/qZH2ijL4BKnxp1nnYfy-W.mp4",
+        "comments": [
+          {
+            "user": "sop_guerreiras",
+            "text": "Eu tenho SOP também, é horrível. Vou tentar esse método.",
+            "time": "10m",
+            "likes": 89,
+            "avatarId": 70
+          },
+          {
+            "user": "bia.nca",
+            "text": "60 dias?? Meu Deus eu preciso.",
+            "time": "45m",
+            "likes": 22,
+            "avatarId": 71
+          },
+          {
+            "user": "doutora_fane",
+            "text": "Alimentação é tudo mesmo.",
+            "time": "3h",
+            "likes": 5,
+            "avatarId": 72
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "name": "Fernanda M.",
+        "age": 35,
+        "location": "Rio de Janeiro, RJ",
+        "text": "Eu achava que era estresse, mas era inflamação. A Dra Ana explicou tudo. Hoje seguro meu milagre no colo.",
+        "likes": "15.3K",
+        "videoUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/h7dYPa4X2Q2VSk89Rh_Mr.mp4",
+        "comments": [
+          {
+            "user": "rio_40graus",
+            "text": "Inflamação silenciosa é o mal do século.",
+            "time": "5m",
+            "likes": 67,
+            "avatarId": 80
+          },
+          {
+            "user": "tentante.fé",
+            "text": "Amém! O meu vai chegar.",
+            "time": "1h",
+            "likes": 14,
+            "avatarId": 81
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "name": "Juliana T.",
+        "age": 41,
+        "location": "Salvador, BA",
+        "text": "Engravidei naturalmente aos 41. Não deixem ninguém dizer que não é possível. O corpo responde quando a gente trata a causa!",
+        "likes": "31.2K",
+        "videoUrl": "https://picsum.photos/id/342/400/800",
+        "comments": [
+          {
+            "user": "anapaula_40",
+            "text": "Você me inspira Ju! Tenho 42 e não desisti.",
+            "time": "1m",
+            "likes": 230,
+            "avatarId": 90
+          },
+          {
+            "user": "mila_baby",
+            "text": "O corpo é uma máquina perfeita.",
+            "time": "15m",
+            "likes": 45,
+            "avatarId": 91
+          },
+          {
+            "user": "sueli_r",
+            "text": "Que benção!",
+            "time": "1d",
+            "likes": 10,
+            "avatarId": 92
+          }
+        ]
+      }
+    ]
+  },
+  "checkout": {
+    "headerLabel": "Oferta Especial",
+    "headline": "\"Você não é quebrada. Seu corpo só precisa do estímulo certo.\"",
+    "subheadline": "Desbloqueie sua fertilidade natural em 3 fases simples, sem hormônios sintéticos e sem procedimentos invasivos.",
+    "badge": "Método Validado",
+    "productName": "Protocolo Fertilidade Natural",
+    "price": "R$ 97",
+    "compareAtPrice": "R$ 497",
+    "valueCents": 9700,
+    "primaryCtaText": "QUERO COMEÇAR AGORA",
+    "secondaryCtaText": "GARANTIR MINHA VAGA",
+    "securePaymentText": "Pagamento 100% Seguro",
+    "bullets": [
+      "Cronograma de 30 dias para limpeza uterina",
+      "Lista de alimentos que aumentam a progesterona",
+      "Técnicas de redução de cortisol (hormônio do estresse)",
+      "Bônus: Guia de chás para o ciclo",
+      "Acesso vitalício ao material"
+    ],
+    "guaranteeTitle": "Garantia de 7 Dias",
+    "guaranteeText": "Se você não sentir diferença na sua disposição e no seu ciclo, devolvemos 100% do seu dinheiro. Sem perguntas.",
+    "checkoutReviews": [
+      {
+        "name": "Roberta F.",
+        "text": "\"O material é muito bem organizado. Já na primeira semana senti menos inchaço.\"",
+        "avatarUrl": "https://i.pravatar.cc/100?img=5"
+      },
+      {
+        "name": "Camila T.",
+        "text": "\"Vale cada centavo. A Dra Gabi explica tudo com muito carinho.\"",
+        "avatarUrl": "https://i.pravatar.cc/100?img=9"
+      },
+      {
+        "name": "Larissa M.",
+        "text": "\"Consegui meu positivo!!! Obrigada por tudo.\"",
+        "avatarUrl": "https://i.pravatar.cc/100?img=20"
+      }
+    ],
+    "footerLines": [
+      "Copyright © 2024 Jornada Fertilidade.",
+      "Este site não possui vínculo com o Facebook ou WhatsApp."
+    ],
+    "blocks": [
+      {
+        "id": "zJ1LXrUzHaOgySnArzPew",
+        "type": "header",
+        "content": {
+          "text": "Oferta Especial"
+        }
+      },
+      {
+        "id": "WSf342UiKjO37EyYfEn62",
+        "type": "hero",
+        "content": {
+          "headline": "\"Você não é quebrada. Seu corpo só precisa do estímulo certo.\"",
+          "subheadline": "Desbloqueie sua fertilidade natural em 3 fases simples, sem hormônios sintéticos e sem procedimentos invasivos.",
+          "badge": "Método Validado",
+          "productName": "Protocolo Fertilidade Natural",
+          "productImageUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/BiEH4iNlqPEQCwhX93P78.jpeg",
+          "price": "R$ 97",
+          "compareAtPrice": "R$ 497",
+          "ctaText": "QUERO COMEÇAR AGORA",
+          "secureText": "Pagamento 100% Seguro"
+        }
+      },
+      {
+        "id": "TIY5blFMfQpXwKy3tjBoW",
+        "type": "bullets",
+        "content": {
+          "title": "O que você vai receber:",
+          "items": [
+            "Cronograma de 30 dias para limpeza uterina",
+            "Lista de alimentos que aumentam a progesterona",
+            "Técnicas de redução de cortisol (hormônio do estresse)",
+            "Bônus: Guia de chás para o ciclo",
+            "Acesso vitalício ao material"
+          ]
+        }
+      },
+      {
+        "id": "WjpFNU-VgYrLSgvdwek_Z",
+        "type": "guarantee",
+        "content": {
+          "title": "Garantia de 7 Dias",
+          "text": "Se você não sentir diferença na sua disposição e no seu ciclo, devolvemos 100% do seu dinheiro. Sem perguntas."
+        }
+      },
+      {
+        "id": "eQkbBWqDAWs-RA_lxW6FV",
+        "type": "reviews",
+        "content": {
+          "title": "Quem já comprou e aprovou:",
+          "items": [
+            {
+              "name": "Roberta F.",
+              "text": "\"O material é muito bem organizado. Já na primeira semana senti menos inchaço.\"",
+              "avatarUrl": "https://i.pravatar.cc/100?img=5",
+              "timeAgo": "15 min atrás "
+            },
+            {
+              "name": "Camila T.",
+              "text": "\"Vale cada centavo. A Dra Gabi explica tudo com muito carinho.\"",
+              "avatarUrl": "https://i.pravatar.cc/100?img=9",
+              "timeAgo": "1h 20 min atrás "
+            },
+            {
+              "name": "Larissa M.",
+              "text": "\"Consegui meu positivo!!! Obrigada por tudo.\"",
+              "avatarUrl": "https://i.pravatar.cc/100?img=20",
+              "timeAgo": "30 min atrás "
+            }
+          ]
+        }
+      },
+      {
+        "id": "thqMwtNnqq72rhyPs5ony",
+        "type": "footer",
+        "content": {
+          "lines": [
+            "Copyright © 2024 Jornada Fertilidade.",
+            "Este site não possui vínculo com o Facebook ou WhatsApp."
+          ]
+        }
+      }
+    ],
+    "productImageUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/BiEH4iNlqPEQCwhX93P78.jpeg"
+  },
+  "offers": {
+    "upsells": [
+      {
+        "id": "upsell-1",
+        "title": "Upsell: Acompanhamento VIP por 30 dias",
+        "subtitle": "Ajustes personalizados para acelerar resultados e tirar dúvidas.",
+        "price": "R$ 47",
+        "compareAtPrice": "R$ 197",
+        "valueCents": 4700,
+        "bullets": [
+          "Plano alimentar ajustado",
+          "Checklist semanal",
+          "Suporte via WhatsApp"
+        ],
+        "acceptText": "Quero adicionar",
+        "declineText": "Não, obrigado"
+      }
+    ],
+    "downsells": [
+      {
+        "id": "downsell-1",
+        "title": "Downsell: Guia rápido de 7 dias",
+        "subtitle": "Versão enxuta para começar hoje com o básico essencial.",
+        "price": "R$ 19",
+        "compareAtPrice": "R$ 97",
+        "valueCents": 1900,
+        "bullets": [
+          "Rotina 7 dias",
+          "Lista de compras",
+          "Receitas simples"
+        ],
+        "acceptText": "Sim, quero o guia",
+        "declineText": "Seguir sem"
+      }
+    ]
+  },
+  "integrations": {
+    "gateway": {
+      "publicKey": "admin@vuxfunells.com",
+      "secretKey": "Admin@26"
+    }
+  },
+  "audio": {
+    "backgroundMusicUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/kH6Q_Rly8ryJf6QKQ7mdK.MP3",
+    "backgroundMusicVolume": 1
+  },
+  "nodes": [
+    {
+      "id": "start",
+      "type": "start",
+      "data": {
+        "label": "Início do Tráfego"
+      },
+      "position": {
+        "x": 400,
+        "y": 50
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "config-doctor",
+      "type": "doctor",
+      "data": {
+        "label": "Dra. Gabriela Soares",
+        "preview": true
+      },
+      "position": {
+        "x": 180,
+        "y": 170
+      },
+      "measured": {
+        "width": 280,
+        "height": 233
+      }
+    },
+    {
+      "id": "config-audio",
+      "type": "audio",
+      "data": {
+        "label": "Configurações de Áudio"
+      },
+      "position": {
+        "x": 620,
+        "y": 170
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "step-incoming-call",
+      "type": "incoming-call",
+      "data": {
+        "label": "Tela de Chamada",
+        "content": "Duração: 91s"
+      },
+      "position": {
+        "x": 400,
+        "y": 320
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "1",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "0:05",
+        "icon": "Mic",
+        "fullMessage": {
+          "id": "1",
+          "type": "audio",
+          "content": "0:05",
+          "sender": "doctor",
+          "delay": 1500,
+          "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/Z22Dq_ckMWTWHBy82yDUX.mp3"
+        },
+        "part": "part1",
+        "index": 0
+      },
+      "position": {
+        "x": 400,
+        "y": 500
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "2",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "0;20",
+        "icon": "Mic",
+        "fullMessage": {
+          "id": "2",
+          "type": "audio",
+          "content": "0;20",
+          "sender": "doctor",
+          "delay": 1000,
+          "requiresInput": true,
+          "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/2EI04onBKkReUj8AluD1K.mp3"
+        },
+        "part": "part1",
+        "index": 1
+      },
+      "position": {
+        "x": 400,
+        "y": 640
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "4",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "0:16",
+        "icon": "Mic",
+        "fullMessage": {
+          "id": "4",
+          "type": "audio",
+          "content": "0:16",
+          "sender": "doctor",
+          "delay": 1500,
+          "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/Qk6wgEfuUoTbHQcmaWRro.mp3"
+        },
+        "part": "part1",
+        "index": 2
+      },
+      "position": {
+        "x": 400,
+        "y": 780
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "3",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "Quantos anos você tem hoje?",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "3",
+          "type": "text",
+          "content": "Quantos anos você tem hoje?",
+          "sender": "doctor",
+          "delay": 2000,
+          "requiresInput": true
+        },
+        "part": "part1",
+        "index": 3
+      },
+      "position": {
+        "x": 400,
+        "y": 920
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "5",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "0:10",
+        "icon": "Mic",
+        "fullMessage": {
+          "id": "5",
+          "type": "audio",
+          "content": "0:10",
+          "sender": "doctor",
+          "delay": 1000,
+          "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/KP7m2gsO1dbhrHTzefpVM.mp3"
+        },
+        "part": "part1",
+        "index": 4
+      },
+      "position": {
+        "x": 400,
+        "y": 1060
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "6",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "0:21",
+        "icon": "Mic",
+        "fullMessage": {
+          "id": "6",
+          "type": "audio",
+          "content": "0:21",
+          "sender": "doctor",
+          "delay": 2500,
+          "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/SMIr3YK1IKiF5EHxtTDH7.mp3"
+        },
+        "part": "part1",
+        "index": 5
+      },
+      "position": {
+        "x": 400,
+        "y": 1200
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "7",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "responde pra mim se você já teve alguns desses tip...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "7",
+          "type": "image",
+          "content": "responde pra mim se você já teve alguns desses tipo de sintomas confirmado ou não!",
+          "sender": "doctor",
+          "delay": 2000,
+          "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/-4e5wv5K-oSwQM-bJ4204.png",
+          "requiresInput": true
+        },
+        "part": "part1",
+        "index": 6
+      },
+      "position": {
+        "x": 400,
+        "y": 1340
+      },
+      "measured": {
+        "width": 280,
+        "height": 107
+      }
+    },
+    {
+      "id": "1769068297874",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "entendo..\nSeu ciclo menstrual é regular?\n",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769068297874",
+          "sender": "doctor",
+          "delay": 1000,
+          "type": "text",
+          "content": "entendo..\nSeu ciclo menstrual é regular?\n",
+          "quickReplies": [
+            {
+              "label": "SIM",
+              "value": "SIM"
+            },
+            {
+              "label": "NÃO",
+              "value": "NÃO"
+            }
+          ],
+          "requiresInput": true
+        },
+        "part": "part1",
+        "index": 7
+      },
+      "position": {
+        "x": 400,
+        "y": 1480
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "1769068389467",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "\n🤔 Você fez Laqueadura?",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769068389467",
+          "sender": "doctor",
+          "delay": 1000,
+          "type": "text",
+          "content": "\n🤔 Você fez Laqueadura?",
+          "requiresInput": true,
+          "quickReplies": [
+            {
+              "label": "SIM",
+              "value": "SIM"
+            },
+            {
+              "label": "NÃO",
+              "value": "NÃO"
+            }
+          ]
+        },
+        "part": "part1",
+        "index": 8
+      },
+      "position": {
+        "x": 400,
+        "y": 1620
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "1769068419051",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "0:13",
+        "icon": "Mic",
+        "fullMessage": {
+          "id": "1769068419051",
+          "sender": "doctor",
+          "delay": 1000,
+          "type": "audio",
+          "content": "0:13",
+          "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/3eK-uJdHO-hPZbPnvsD9r.mp3"
+        },
+        "part": "part1",
+        "index": 9
+      },
+      "position": {
+        "x": 400,
+        "y": 1760
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "1769068525540",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "0:36",
+        "icon": "Mic",
+        "fullMessage": {
+          "id": "1769068525540",
+          "sender": "doctor",
+          "delay": 1000,
+          "type": "audio",
+          "content": "0:36",
+          "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/pcWwW-6vpJqgmRTV3zhVs.mp3"
+        },
+        "part": "part1",
+        "index": 10
+      },
+      "position": {
+        "x": 400,
+        "y": 1900
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "1769068589386",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "olha eu vou te ligar por chamada de vídeo pra expl...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769068589386",
+          "sender": "doctor",
+          "delay": 2000,
+          "type": "image",
+          "content": "olha eu vou te ligar por chamada de vídeo pra explicar pra você a sua situação de forma mais clara! ",
+          "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/RirNkZgO3MviFZTwU6Uva.png"
+        },
+        "part": "part1",
+        "index": 11
+      },
+      "position": {
+        "x": 400,
+        "y": 2040
+      },
+      "measured": {
+        "width": 280,
+        "height": 107
+      }
+    },
+    {
+      "id": "1769140115419",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "Quero que você entenda da melhor forma tudo que eu...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769140115419",
+          "sender": "doctor",
+          "delay": 2500,
+          "type": "text",
+          "content": "Quero que você entenda da melhor forma tudo que eu analisei sobre você. "
+        },
+        "part": "part1",
+        "index": 12
+      },
+      "position": {
+        "x": 400,
+        "y": 2180
+      },
+      "measured": {
+        "width": 280,
+        "height": 107
+      }
+    },
+    {
+      "id": "1769140153174",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "Mais fique tranquila, (você não vai aparecer)",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769140153174",
+          "sender": "doctor",
+          "delay": 1500,
+          "type": "text",
+          "content": "Mais fique tranquila, (você não vai aparecer)"
+        },
+        "part": "part1",
+        "index": 13
+      },
+      "position": {
+        "x": 400,
+        "y": 2320
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "1769141477750",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": " Apenas escute com atenção e carinho pois isso pod...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769141477750",
+          "sender": "doctor",
+          "delay": 2500,
+          "type": "text",
+          "content": " Apenas escute com atenção e carinho pois isso pode ser tudo que você procurava pra te ajudar a engravidar de forma saudável e segura!  "
+        },
+        "part": "part1",
+        "index": 14
+      },
+      "position": {
+        "x": 400,
+        "y": 2460
+      },
+      "measured": {
+        "width": 280,
+        "height": 107
+      }
+    },
+    {
+      "id": "1769140154977",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "posso ligar?",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769140154977",
+          "sender": "doctor",
+          "delay": 1000,
+          "type": "text",
+          "content": "posso ligar?",
+          "quickReplies": [
+            {
+              "label": "SIM",
+              "value": "SIM"
+            }
+          ],
+          "requiresInput": true
+        },
+        "part": "part1",
+        "index": 15
+      },
+      "position": {
+        "x": 400,
+        "y": 2600
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "step-video-call",
+      "type": "video-call",
+      "data": {
+        "label": "Chamada de Vídeo (VSL)",
+        "content": "Duração: 114s"
+      },
+      "position": {
+        "x": 400,
+        "y": 2740
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "10",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "Você REALMENTE quer a receita, e finalmente conseg...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "10",
+          "type": "text",
+          "content": "Você REALMENTE quer a receita, e finalmente conseguir engravidar?\n",
+          "sender": "doctor",
+          "delay": 1000,
+          "requiresInput": true,
+          "quickReplies": [
+            {
+              "label": "SIM",
+              "value": "SIM"
+            }
+          ]
+        },
+        "part": "part2",
+        "index": 0
+      },
+      "position": {
+        "x": 400,
+        "y": 2920
+      },
+      "measured": {
+        "width": 280,
+        "height": 107
+      }
+    },
+    {
+      "id": "11",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "0:35",
+        "icon": "Mic",
+        "fullMessage": {
+          "id": "11",
+          "type": "audio",
+          "content": "0:35",
+          "sender": "doctor",
+          "delay": 1500,
+          "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/t5y7wyNaNk29TgRZvMRxD.mp3"
+        },
+        "part": "part2",
+        "index": 1
+      },
+      "position": {
+        "x": 400,
+        "y": 3060
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "12",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "Antes de te mandar acesso aos vídeos de depoimento...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "12",
+          "type": "text",
+          "content": "Antes de te mandar acesso aos vídeos de depoimentos me informe aqui o seu numero de WhatsApp!",
+          "sender": "doctor",
+          "delay": 2000
+        },
+        "part": "part2",
+        "index": 2
+      },
+      "position": {
+        "x": 400,
+        "y": 3200
+      },
+      "measured": {
+        "width": 280,
+        "height": 107
+      }
+    },
+    {
+      "id": "1769148343496",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "🚨 (ESCREVA DA FORMA CORRETA POIS SERA POR LA QUE ...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769148343496",
+          "sender": "doctor",
+          "delay": 1500,
+          "type": "text",
+          "content": "🚨 (ESCREVA DA FORMA CORRETA POIS SERA POR LA QUE EU TE MANDAREI A RECEITA É O PASSO A PASSO CORRETO EXCLUSIVO PRA VOCÊ!)  🚨        ",
+          "requiresInput": true
+        },
+        "part": "part2",
+        "index": 3
+      },
+      "position": {
+        "x": 400,
+        "y": 3340
+      },
+      "measured": {
+        "width": 280,
+        "height": 107
+      }
+    },
+    {
+      "id": "13",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "Então bora resolver isso amiga!\n   ",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "13",
+          "type": "text",
+          "content": "Então bora resolver isso amiga!\n   ",
+          "sender": "doctor",
+          "delay": 2500,
+          "action": "open_reviews"
+        },
+        "part": "part2",
+        "index": 4
+      },
+      "position": {
+        "x": 400,
+        "y": 3480
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "1769148343054",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "Quantas vezes você já ouviu falar que é tarde dema...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769148343054",
+          "sender": "doctor",
+          "delay": 1000,
+          "type": "text",
+          "content": "Quantas vezes você já ouviu falar que é tarde demais..."
+        },
+        "part": "part2",
+        "index": 5
+      },
+      "position": {
+        "x": 400,
+        "y": 3620
+      },
+      "measured": {
+        "width": 280,
+        "height": 107
+      }
+    },
+    {
+      "id": "1769068276253",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "A verdade é que seu corpo não desistiu de você, el...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769068276253",
+          "sender": "doctor",
+          "delay": 2000,
+          "type": "text",
+          "content": "A verdade é que seu corpo não desistiu de você, ele só precisa do estímulo certo.\n"
+        },
+        "part": "part2",
+        "index": 6
+      },
+      "position": {
+        "x": 400,
+        "y": 3760
+      },
+      "measured": {
+        "width": 280,
+        "height": 107
+      }
+    },
+    {
+      "id": "1769071602177",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "🌿 Este método natural já ajudou centenas de mulhe...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769071602177",
+          "sender": "doctor",
+          "delay": 1000,
+          "type": "text",
+          "content": "🌿 Este método natural já ajudou centenas de mulheres a realizarem o sonho da maternidade."
+        },
+        "part": "part2",
+        "index": 7
+      },
+      "position": {
+        "x": 400,
+        "y": 3900
+      },
+      "measured": {
+        "width": 280,
+        "height": 107
+      }
+    },
+    {
+      "id": "1769071625353",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "\nE agora, pode ser a sua vez.\n",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769071625353",
+          "sender": "doctor",
+          "delay": 1000,
+          "type": "text",
+          "content": "\nE agora, pode ser a sua vez.\n"
+        },
+        "part": "part2",
+        "index": 8
+      },
+      "position": {
+        "x": 400,
+        "y": 4040
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "1769071647145",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "essa receita da garrafada para gravidez, vai devol...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769071647145",
+          "sender": "doctor",
+          "delay": 2000,
+          "type": "text",
+          "content": "essa receita da garrafada para gravidez, vai devolver sua fertilidade e principalmente aumentar o afeto entre você e seu parceiro💞                   "
+        },
+        "part": "part2",
+        "index": 9
+      },
+      "position": {
+        "x": 400,
+        "y": 4180
+      },
+      "measured": {
+        "width": 280,
+        "height": 107
+      }
+    },
+    {
+      "id": "1769071676619",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": " O valor da receita da garrafada natural, junto co...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769071676619",
+          "sender": "doctor",
+          "delay": 2000,
+          "type": "image",
+          "content": " O valor da receita da garrafada natural, junto com o meu acompanhamento, (ERA) R$ 497,00",
+          "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/CLYZzFlFjF4j22fy35W2s.jpeg"
+        },
+        "part": "part2",
+        "index": 10
+      },
+      "position": {
+        "x": 400,
+        "y": 4320
+      },
+      "measured": {
+        "width": 280,
+        "height": 107
+      }
+    },
+    {
+      "id": "1769071760146",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "Mas você não vai pagar nem perto disso...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769071760146",
+          "sender": "doctor",
+          "delay": 1000,
+          "type": "text",
+          "content": "Mas você não vai pagar nem perto disso..."
+        },
+        "part": "part2",
+        "index": 11
+      },
+      "position": {
+        "x": 400,
+        "y": 4460
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "1769071771498",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "\nSó hoje! te Libero o acesso completo e todo meu c...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769071771498",
+          "sender": "doctor",
+          "delay": 3000,
+          "type": "text",
+          "content": "\nSó hoje! te Libero o acesso completo e todo meu cuidado profissional por apenas R$ 97,00 no pix ou cartão de credito.\n"
+        },
+        "part": "part2",
+        "index": 12
+      },
+      "position": {
+        "x": 400,
+        "y": 4600
+      },
+      "measured": {
+        "width": 280,
+        "height": 107
+      }
+    },
+    {
+      "id": "1769071827689",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "Mas olha 😯 Essa condição de R$ 97 é só para as pr...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769071827689",
+          "sender": "doctor",
+          "delay": 1500,
+          "type": "text",
+          "content": "Mas olha 😯 Essa condição de R$ 97 é só para as próximas 20 pessoas, tá?\n            "
+        },
+        "part": "part2",
+        "index": 13
+      },
+      "position": {
+        "x": 400,
+        "y": 4740
+      },
+      "measured": {
+        "width": 280,
+        "height": 107
+      }
+    },
+    {
+      "id": "1769071870809",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "\nja foram 18 pessoas até agora e você ainda tem te...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769071870809",
+          "sender": "doctor",
+          "delay": 1000,
+          "type": "text",
+          "content": "\nja foram 18 pessoas até agora e você ainda tem tempo ⏰\n"
+        },
+        "part": "part2",
+        "index": 14
+      },
+      "position": {
+        "x": 400,
+        "y": 4880
+      },
+      "measured": {
+        "width": 280,
+        "height": 107
+      }
+    },
+    {
+      "id": "1769071901841",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "[Mídia]",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769071901841",
+          "sender": "doctor",
+          "delay": 1000,
+          "type": "image",
+          "content": "",
+          "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/-rmwO5xax0grmQkI7p66p.jpeg"
+        },
+        "part": "part2",
+        "index": 15
+      },
+      "position": {
+        "x": 400,
+        "y": 5020
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "1769071924817",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "Mesmo com laqueadura, endometriose, miomas ou ovár...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769071924817",
+          "sender": "doctor",
+          "delay": 1000,
+          "type": "image",
+          "content": "Mesmo com laqueadura, endometriose, miomas ou ovários policísticos... mulheres estão realizando o sonho de ser mãe com esse chá natural e poderoso!",
+          "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/NX2o1ZwAv_JsuBAXLa3oU.jpeg"
+        },
+        "part": "part2",
+        "index": 16
+      },
+      "position": {
+        "x": 400,
+        "y": 5160
+      },
+      "measured": {
+        "width": 280,
+        "height": 107
+      }
+    },
+    {
+      "id": "1769071994315",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "0:15",
+        "icon": "Mic",
+        "fullMessage": {
+          "id": "1769071994315",
+          "sender": "doctor",
+          "delay": 1000,
+          "type": "audio",
+          "content": "0:15",
+          "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/QXUq0OiJ--ldiv1rBn2c2.mp3"
+        },
+        "part": "part2",
+        "index": 17
+      },
+      "position": {
+        "x": 400,
+        "y": 5300
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "1769072030889",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "\nAmiga não deixe o Tempo passar mais\n",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769072030889",
+          "sender": "doctor",
+          "delay": 1000,
+          "type": "text",
+          "content": "\nAmiga não deixe o Tempo passar mais\n"
+        },
+        "part": "part2",
+        "index": 18
+      },
+      "position": {
+        "x": 400,
+        "y": 5440
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "1769072152361",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "quanto mais tempo demorar pra você ter seu filho(a...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769072152361",
+          "sender": "doctor",
+          "delay": 1000,
+          "type": "text",
+          "content": "quanto mais tempo demorar pra você ter seu filho(a)"
+        },
+        "part": "part2",
+        "index": 19
+      },
+      "position": {
+        "x": 400,
+        "y": 5580
+      },
+      "measured": {
+        "width": 280,
+        "height": 107
+      }
+    },
+    {
+      "id": "1769072160425",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "menor a chance de ter 💔😔\n",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769072160425",
+          "sender": "doctor",
+          "delay": 1000,
+          "type": "text",
+          "content": "menor a chance de ter 💔😔\n"
+        },
+        "part": "part2",
+        "index": 20
+      },
+      "position": {
+        "x": 400,
+        "y": 5720
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "1769072168099",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "\n✨ Não deixe o tempo levar o que ainda pode ser se...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769072168099",
+          "sender": "doctor",
+          "delay": 1000,
+          "type": "text",
+          "content": "\n✨ Não deixe o tempo levar o que ainda pode ser seu."
+        },
+        "part": "part2",
+        "index": 21
+      },
+      "position": {
+        "x": 400,
+        "y": 5860
+      },
+      "measured": {
+        "width": 280,
+        "height": 107
+      }
+    },
+    {
+      "id": "1769072261682",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "então aproveite agora essa oportunidade que Deus e...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769072261682",
+          "sender": "doctor",
+          "delay": 1000,
+          "type": "image",
+          "content": "então aproveite agora essa oportunidade que Deus está te dando 🙏",
+          "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/Vw_OrHiFUP1PsVtNpR0v3.png"
+        },
+        "part": "part2",
+        "index": 22
+      },
+      "position": {
+        "x": 400,
+        "y": 6000
+      },
+      "measured": {
+        "width": 280,
+        "height": 107
+      }
+    },
+    {
+      "id": "1769072309899",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "Vou deixar uma opção caso você queira ver algumas ...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769072309899",
+          "sender": "doctor",
+          "delay": 1000,
+          "type": "text",
+          "content": "Vou deixar uma opção caso você queira ver algumas provas sócias, caso não queira pode clicar em \"EU VOU ENGRAVIDAR\" ",
+          "quickReplies": [
+            {
+              "label": "🤰 EU VOU ENGRAVIDAR 🤰",
+              "value": "🤰 EU VOU ENGRAVIDAR 🤰"
+            },
+            {
+              "label": "🤱🏻 FEEDBAAK DE CASOS REAIS 🤱🏻",
+              "value": "🤱🏻 FEEDBAAK DE CASOS REAIS 🤱🏻"
+            }
+          ]
+        },
+        "part": "part2",
+        "index": 23
+      },
+      "position": {
+        "x": 400,
+        "y": 6140
+      },
+      "measured": {
+        "width": 280,
+        "height": 107
+      }
+    },
+    {
+      "id": "1769072558753",
+      "type": "chat-message",
+      "data": {
+        "label": "Doutora",
+        "content": "são 5 vídeos curtos, no final deles terá um botão ...",
+        "icon": "MessageSquare",
+        "fullMessage": {
+          "id": "1769072558753",
+          "sender": "doctor",
+          "delay": 1000,
+          "type": "text",
+          "content": "são 5 vídeos curtos, no final deles terá um botão pra você ter acesso ao caminho certo, ao caminho seguro!\nveja os vídeos ou pule pro ultimo pra ter acesso! te vejo jaja."
+        },
+        "part": "part2",
+        "index": 24
+      },
+      "position": {
+        "x": 400,
+        "y": 6280
+      },
+      "measured": {
+        "width": 280,
+        "height": 107
+      }
+    },
+    {
+      "id": "step-reviews",
+      "type": "reviews",
+      "data": {
+        "label": "Reviews",
+        "content": "5 avaliações cadastradas"
+      },
+      "position": {
+        "x": 400,
+        "y": 6420
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "step-checkout",
+      "type": "checkout",
+      "data": {
+        "label": "Checkout",
+        "content": "Produto: Protocolo Fertilidade Natural - R$ 97"
+      },
+      "position": {
+        "x": 400,
+        "y": 6600
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "step-upsell",
+      "type": "upsell",
+      "data": {
+        "label": "Upsell / Downsell",
+        "content": "1 upsells, 1 downsells"
+      },
+      "position": {
+        "x": 400,
+        "y": 6780
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-start-doctor",
+      "source": "start",
+      "target": "config-doctor",
+      "animated": true,
+      "style": {
+        "stroke": "#4b5563",
+        "strokeDasharray": "5,5"
+      }
+    },
+    {
+      "id": "e-start-audio",
+      "source": "start",
+      "target": "config-audio",
+      "animated": true,
+      "style": {
+        "stroke": "#4b5563",
+        "strokeDasharray": "5,5"
+      }
+    },
+    {
+      "id": "e-start-incoming",
+      "source": "start",
+      "target": "step-incoming-call",
+      "animated": true
+    },
+    {
+      "id": "e-step-incoming-call-1",
+      "source": "step-incoming-call",
+      "target": "1"
+    },
+    {
+      "id": "e-1-2",
+      "source": "1",
+      "target": "2"
+    },
+    {
+      "id": "e-2-4",
+      "source": "2",
+      "target": "4"
+    },
+    {
+      "id": "e-4-3",
+      "source": "4",
+      "target": "3"
+    },
+    {
+      "id": "e-3-5",
+      "source": "3",
+      "target": "5"
+    },
+    {
+      "id": "e-5-6",
+      "source": "5",
+      "target": "6"
+    },
+    {
+      "id": "e-6-7",
+      "source": "6",
+      "target": "7"
+    },
+    {
+      "id": "e-7-1769068297874",
+      "source": "7",
+      "target": "1769068297874"
+    },
+    {
+      "id": "e-1769068297874-1769068389467",
+      "source": "1769068297874",
+      "target": "1769068389467"
+    },
+    {
+      "id": "e-1769068389467-1769068419051",
+      "source": "1769068389467",
+      "target": "1769068419051"
+    },
+    {
+      "id": "e-1769068419051-1769068525540",
+      "source": "1769068419051",
+      "target": "1769068525540"
+    },
+    {
+      "id": "e-1769068525540-1769068589386",
+      "source": "1769068525540",
+      "target": "1769068589386"
+    },
+    {
+      "id": "e-1769068589386-1769140115419",
+      "source": "1769068589386",
+      "target": "1769140115419"
+    },
+    {
+      "id": "e-1769140115419-1769140153174",
+      "source": "1769140115419",
+      "target": "1769140153174"
+    },
+    {
+      "id": "e-1769140153174-1769141477750",
+      "source": "1769140153174",
+      "target": "1769141477750"
+    },
+    {
+      "id": "e-1769141477750-1769140154977",
+      "source": "1769141477750",
+      "target": "1769140154977"
+    },
+    {
+      "id": "e-1769140154977-step-video-call",
+      "source": "1769140154977",
+      "target": "step-video-call",
+      "animated": true,
+      "label": "Atender"
+    },
+    {
+      "id": "e-step-video-call-10",
+      "source": "step-video-call",
+      "target": "10"
+    },
+    {
+      "id": "e-10-11",
+      "source": "10",
+      "target": "11"
+    },
+    {
+      "id": "e-11-12",
+      "source": "11",
+      "target": "12"
+    },
+    {
+      "id": "e-12-1769148343496",
+      "source": "12",
+      "target": "1769148343496"
+    },
+    {
+      "id": "e-1769148343496-13",
+      "source": "1769148343496",
+      "target": "13"
+    },
+    {
+      "id": "e-13-1769148343054",
+      "source": "13",
+      "target": "1769148343054"
+    },
+    {
+      "id": "e-1769148343054-1769068276253",
+      "source": "1769148343054",
+      "target": "1769068276253"
+    },
+    {
+      "id": "e-1769068276253-1769071602177",
+      "source": "1769068276253",
+      "target": "1769071602177"
+    },
+    {
+      "id": "e-1769071602177-1769071625353",
+      "source": "1769071602177",
+      "target": "1769071625353"
+    },
+    {
+      "id": "e-1769071625353-1769071647145",
+      "source": "1769071625353",
+      "target": "1769071647145"
+    },
+    {
+      "id": "e-1769071647145-1769071676619",
+      "source": "1769071647145",
+      "target": "1769071676619"
+    },
+    {
+      "id": "e-1769071676619-1769071760146",
+      "source": "1769071676619",
+      "target": "1769071760146"
+    },
+    {
+      "id": "e-1769071760146-1769071771498",
+      "source": "1769071760146",
+      "target": "1769071771498"
+    },
+    {
+      "id": "e-1769071771498-1769071827689",
+      "source": "1769071771498",
+      "target": "1769071827689"
+    },
+    {
+      "id": "e-1769071827689-1769071870809",
+      "source": "1769071827689",
+      "target": "1769071870809"
+    },
+    {
+      "id": "e-1769071870809-1769071901841",
+      "source": "1769071870809",
+      "target": "1769071901841"
+    },
+    {
+      "id": "e-1769071901841-1769071924817",
+      "source": "1769071901841",
+      "target": "1769071924817"
+    },
+    {
+      "id": "e-1769071924817-1769071994315",
+      "source": "1769071924817",
+      "target": "1769071994315"
+    },
+    {
+      "id": "e-1769071994315-1769072030889",
+      "source": "1769071994315",
+      "target": "1769072030889"
+    },
+    {
+      "id": "e-1769072030889-1769072152361",
+      "source": "1769072030889",
+      "target": "1769072152361"
+    },
+    {
+      "id": "e-1769072152361-1769072160425",
+      "source": "1769072152361",
+      "target": "1769072160425"
+    },
+    {
+      "id": "e-1769072160425-1769072168099",
+      "source": "1769072160425",
+      "target": "1769072168099"
+    },
+    {
+      "id": "e-1769072168099-1769072261682",
+      "source": "1769072168099",
+      "target": "1769072261682"
+    },
+    {
+      "id": "e-1769072261682-1769072309899",
+      "source": "1769072261682",
+      "target": "1769072309899"
+    },
+    {
+      "id": "e-1769072309899-1769072558753",
+      "source": "1769072309899",
+      "target": "1769072558753"
+    },
+    {
+      "id": "e-1769072558753-step-reviews",
+      "source": "1769072558753",
+      "target": "step-reviews",
+      "animated": true
+    },
+    {
+      "id": "e-step-reviews-step-checkout",
+      "source": "step-reviews",
+      "target": "step-checkout",
+      "animated": true
+    },
+    {
+      "id": "e-step-checkout-step-upsell",
+      "source": "step-checkout",
+      "target": "step-upsell",
+      "animated": true
+    }
+  ],
+  "layout": {
+    "1": {
+      "x": 400,
+      "y": 500
+    },
+    "2": {
+      "x": 400,
+      "y": 640
+    },
+    "3": {
+      "x": 400,
+      "y": 920
+    },
+    "4": {
+      "x": 400,
+      "y": 780
+    },
+    "5": {
+      "x": 400,
+      "y": 1060
+    },
+    "6": {
+      "x": 400,
+      "y": 1200
+    },
+    "7": {
+      "x": 400,
+      "y": 1340
+    },
+    "10": {
+      "x": 400,
+      "y": 2920
+    },
+    "11": {
+      "x": 400,
+      "y": 3060
+    },
+    "12": {
+      "x": 400,
+      "y": 3200
+    },
+    "13": {
+      "x": 400,
+      "y": 3480
+    },
+    "start": {
+      "x": 400,
+      "y": 50
+    },
+    "config-doctor": {
+      "x": 180,
+      "y": 170
+    },
+    "config-audio": {
+      "x": 620,
+      "y": 170
+    },
+    "step-incoming-call": {
+      "x": 400,
+      "y": 320
+    },
+    "1769068297874": {
+      "x": 400,
+      "y": 1480
+    },
+    "1769068389467": {
+      "x": 400,
+      "y": 1620
+    },
+    "1769068419051": {
+      "x": 400,
+      "y": 1760
+    },
+    "1769068525540": {
+      "x": 400,
+      "y": 1900
+    },
+    "1769068589386": {
+      "x": 400,
+      "y": 2040
+    },
+    "1769140115419": {
+      "x": 400,
+      "y": 2180
+    },
+    "1769140153174": {
+      "x": 400,
+      "y": 2320
+    },
+    "1769141477750": {
+      "x": 400,
+      "y": 2460
+    },
+    "1769140154977": {
+      "x": 400,
+      "y": 2600
+    },
+    "step-video-call": {
+      "x": 400,
+      "y": 2740
+    },
+    "1769148343496": {
+      "x": 400,
+      "y": 3340
+    },
+    "1769148343054": {
+      "x": 400,
+      "y": 3620
+    },
+    "1769068276253": {
+      "x": 400,
+      "y": 3760
+    },
+    "1769071602177": {
+      "x": 400,
+      "y": 3900
+    },
+    "1769071625353": {
+      "x": 400,
+      "y": 4040
+    },
+    "1769071647145": {
+      "x": 400,
+      "y": 4180
+    },
+    "1769071676619": {
+      "x": 400,
+      "y": 4320
+    },
+    "1769071760146": {
+      "x": 400,
+      "y": 4460
+    },
+    "1769071771498": {
+      "x": 400,
+      "y": 4600
+    },
+    "1769071827689": {
+      "x": 400,
+      "y": 4740
+    },
+    "1769071870809": {
+      "x": 400,
+      "y": 4880
+    },
+    "1769071901841": {
+      "x": 400,
+      "y": 5020
+    },
+    "1769071924817": {
+      "x": 400,
+      "y": 5160
+    },
+    "1769071994315": {
+      "x": 400,
+      "y": 5300
+    },
+    "1769072030889": {
+      "x": 400,
+      "y": 5440
+    },
+    "1769072152361": {
+      "x": 400,
+      "y": 5580
+    },
+    "1769072160425": {
+      "x": 400,
+      "y": 5720
+    },
+    "1769072168099": {
+      "x": 400,
+      "y": 5860
+    },
+    "1769072261682": {
+      "x": 400,
+      "y": 6000
+    },
+    "1769072309899": {
+      "x": 400,
+      "y": 6140
+    },
+    "1769072558753": {
+      "x": 400,
+      "y": 6280
+    },
+    "step-reviews": {
+      "x": 400,
+      "y": 6420
+    },
+    "step-checkout": {
+      "x": 400,
+      "y": 6600
+    },
+    "step-upsell": {
+      "x": 400,
+      "y": 6780
+    }
+  }
+}

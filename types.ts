@@ -183,6 +183,29 @@ export interface FunnelDefinition {
   marketing?: MarketingConfig;
   theme?: 'dark' | 'light';
   audio?: AudioConfig;
+
+  // Visual Builder Layout Data
+  layout?: Record<string, { x: number; y: number }>;
+  nodes?: FlowNode[];
+  edges?: FlowEdge[];
+  startNodeId?: string;
+}
+
+export interface FlowNode {
+  id: string;
+  type: string;
+  data: any;
+  position: { x: number; y: number };
+}
+
+export interface FlowEdge {
+  id: string;
+  source: string;
+  target: string;
+  label?: string;
+  animated?: boolean;
+  sourceHandle?: string;
+  targetHandle?: string;
 }
 
 export interface PublicFunnelResponse {

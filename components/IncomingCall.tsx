@@ -78,8 +78,14 @@ const IncomingCall: React.FC<IncomingCallProps> = ({
             voiceRef.current = null;
         }
       };
+    } else if (callStatus === 'ringing') {
+        // Handle ringing state
+        // If autoStartVideo is enabled, we might want to auto-accept?
+        // No, usually autoStartVideo is handled by parent onAnswer.
+        // But if there's a duration for RINGING, we should probably respect it?
+        // Let's assume 'duration' prop is for the CONNECTED call duration (VSL/Audio).
+        // If it's for ringing, we need a separate prop.
     }
-    return () => clearInterval(interval);
   }, [callStatus, onAnswer, voiceUrl, duration]);
 
   const handleAccept = () => {

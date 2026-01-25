@@ -80,7 +80,16 @@ const db = createJsonStore({
       }
     ],
     leads: [],
-    events: []
+    events: [],
+    settings: {
+      emailMarketing: { provider: 'resend', apiKey: '', fromEmail: '' },
+      whatsapp: { 
+        waba: { token: '', phoneId: '', wabaId: '' },
+        evolution: { url: '', apiKey: '', instanceName: '' },
+        activeTab: 'waba'
+      }
+    },
+    webhooks: []
   }
 });
 
@@ -543,101 +552,29 @@ app.get('/api/admin/leads/:id', authRequired, adminRequired, async (req, res) =>
 app.get('/api/admin/metrics/overview', authRequired, adminRequired, async (_req, res) => {
   try {
     const data = await db.read();
-    const leads = Array.isArray(data?.leads) ? data.leads : [];
-    const events = Array.isArray(data?.events) ? data.events : [];
     
-    const totalLeads = leads.length;
-    const totalConversions = leads.filter((l) => Boolean(l && l.convertedAt)).length;
-    const conversionRate = totalLeads === 0 ? 0 : totalConversions / totalLeads;
+    // Calculate total leads
+    const totalLeads = data.leads.length;
 
-    const byStep = new Map();
-    for (const e of events) {
-      if (!e || e.type !== 'step_view') continue;
-      if (!e.step) continue;
-      byStep.set(e.step, (byStep.get(e.step) || 0) + 1);
-    }
+    // Calculate total revenue
+    const totalRevenueCents = data.leads.reduce((acc, lead) => acc + (lead.lifetimeValueCents || 0), 0);
 
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const startOfWeek = new Date(startOfDay);
-    startOfWeek.setDate(startOfWeek.getDate() - ((startOfWeek.getDay() + 6) % 7));
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    // Calculate conversion rate (leads with convertedAt / total leads)
+    const convertedLeads = data.leads.filter(l => l.convertedAt).length;
+    const conversionRate = totalLeads > 0 ? (convertedLeads / totalLeads) : 0;
 
-    const purchases = events.filter((e) => e && e.type === 'purchase');
-    const checkoutStarts = events.filter((e) => e && e.type === 'checkout_started');
-
-    const toDate = (iso) => {
-      if (!iso) return null;
-      const d = new Date(iso);
-      return Number.isNaN(d.getTime()) ? null : d;
-    };
-
-    function sumInRange(list, start) {
-      let count = 0;
-      let valueCents = 0;
-      for (const e of list) {
-        if (!e) continue;
-        const d = toDate(e.ts);
-        if (!d) continue;
-        if (d >= start) {
-          count += 1;
-          valueCents += Number(e.payload?.valueCents || 0);
-        }
-      }
-      return { count, valueCents };
-    }
-
-    const purchasesDay = sumInRange(purchases, startOfDay);
-    const purchasesWeek = sumInRange(purchases, startOfWeek);
-    const purchasesMonth = sumInRange(purchases, startOfMonth);
-    const checkoutDay = sumInRange(checkoutStarts, startOfDay).count;
-    const checkoutWeek = sumInRange(checkoutStarts, startOfWeek).count;
-    const checkoutMonth = sumInRange(checkoutStarts, startOfMonth).count;
-
-    const abandonmentRateDay = checkoutDay === 0 ? 0 : (checkoutDay - purchasesDay.count) / checkoutDay;
-    const abandonmentRateWeek = checkoutWeek === 0 ? 0 : (checkoutWeek - purchasesWeek.count) / checkoutWeek;
-    const abandonmentRateMonth = checkoutMonth === 0 ? 0 : (checkoutMonth - purchasesMonth.count) / checkoutMonth;
-
-    const lastNDays = 30;
-    const days = [];
-    for (let i = lastNDays - 1; i >= 0; i -= 1) {
-      const d = new Date(startOfDay);
-      d.setDate(d.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
-      days.push({ day: key, purchases: 0, valueCents: 0 });
-    }
-    const idxByDay = new Map(days.map((d, i) => [d.day, i]));
-    for (const e of purchases) {
-      if (!e) continue;
-      const day = String(e.ts || '').slice(0, 10);
-      const idx = idxByDay.get(day);
-      if (idx === undefined) continue;
-      days[idx].purchases += 1;
-      days[idx].valueCents += Number(e.payload?.valueCents || 0);
-    }
-
-    const offerViews = events.filter((e) => e && e.type === 'offer_view');
-    const offerAccept = events.filter((e) => e && e.type === 'offer_accept');
-    const upsellTakeRate = offerViews.length === 0 ? 0 : offerAccept.length / offerViews.length;
+    // Recent revenue (last 30 days) - Mocked for now or aggregate from events
+    const recentRevenue = []; // Implement real aggregation if needed
 
     res.json({
-      totals: { totalLeads, totalConversions, conversionRate },
-      steps: Array.from(byStep.entries()).map(([step, count]) => ({ step, count })),
-      sales: {
-        day: purchasesDay,
-        week: purchasesWeek,
-        month: purchasesMonth,
-        seriesLast30Days: days
-      },
-      checkout: {
-        starts: { day: checkoutDay, week: checkoutWeek, month: checkoutMonth },
-        abandonmentRate: { day: abandonmentRateDay, week: abandonmentRateWeek, month: abandonmentRateMonth }
-      },
-      offers: { upsellTakeRate, offerViews: offerViews.length, offerAccepts: offerAccept.length }
+      totalLeads,
+      totalRevenueCents,
+      conversionRate,
+      recentRevenue
     });
-  } catch (error) {
-    console.error('Metrics Error:', error);
-    res.status(500).json({ error: 'failed_metrics' });
+  } catch (err) {
+    console.error('Metrics Error:', err);
+    res.status(500).json({ error: 'internal_error' });
   }
 });
 
@@ -916,6 +853,86 @@ app.get('/api/openpix/charge/:correlationID', async (req, res) => {
     res.json(json);
   } catch (e) {
     console.error('Payment Check Error:', e);
+    res.status(500).json({ error: 'internal_error' });
+  }
+});
+
+app.get('/api/admin/settings', authRequired, adminRequired, async (_req, res) => {
+  try {
+    const data = await db.read();
+    res.json({ settings: data.settings || {} });
+  } catch (err) {
+    console.error('Fetch Settings Error:', err);
+    res.status(500).json({ error: 'internal_error' });
+  }
+});
+
+app.put('/api/admin/settings', authRequired, adminRequired, async (req, res) => {
+  try {
+    const data = await db.read();
+    if (!data.settings) data.settings = {};
+    
+    // Deep merge settings
+    const newSettings = req.body;
+    if (newSettings.emailMarketing) {
+        data.settings.emailMarketing = { ...data.settings.emailMarketing, ...newSettings.emailMarketing };
+    }
+    if (newSettings.whatsapp) {
+        data.settings.whatsapp = { ...data.settings.whatsapp, ...newSettings.whatsapp };
+    }
+
+    await db.write(d => d.settings = data.settings);
+    res.json({ settings: data.settings });
+  } catch (err) {
+    console.error('Update Settings Error:', err);
+    res.status(500).json({ error: 'internal_error' });
+  }
+});
+
+app.get('/api/admin/webhooks', authRequired, adminRequired, async (_req, res) => {
+  try {
+    const data = await db.read();
+    res.json({ webhooks: data.webhooks || [] });
+  } catch (err) {
+    console.error('Fetch Webhooks Error:', err);
+    res.status(500).json({ error: 'internal_error' });
+  }
+});
+
+app.post('/api/admin/webhooks', authRequired, adminRequired, async (req, res) => {
+  try {
+    const schema = z.object({
+      url: z.string().url(),
+      event: z.string().min(1),
+      active: z.boolean().default(true)
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'invalid_body' });
+
+    const webhook = { id: Date.now(), ...parsed.data };
+    
+    await db.write(data => {
+        if (!data.webhooks) data.webhooks = [];
+        data.webhooks.push(webhook);
+    });
+
+    res.json({ webhook });
+  } catch (err) {
+    console.error('Create Webhook Error:', err);
+    res.status(500).json({ error: 'internal_error' });
+  }
+});
+
+app.delete('/api/admin/webhooks/:id', authRequired, adminRequired, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    await db.write(data => {
+        if (!data.webhooks) return;
+        data.webhooks = data.webhooks.filter(w => w.id !== id);
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Delete Webhook Error:', err);
     res.status(500).json({ error: 'internal_error' });
   }
 });

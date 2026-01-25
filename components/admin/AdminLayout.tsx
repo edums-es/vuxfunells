@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { adminTokenStorage, adminMe, AdminUser } from '../../lib/api';
-import { LayoutDashboard, Filter, Users, LogOut, Menu, X, ChevronRight, Shield } from 'lucide-react';
+import { LayoutDashboard, Filter, Users, LogOut, Menu, X, ChevronRight, Shield, Mail, Webhook, CreditCard, MessageCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 const AdminLayout: React.FC = () => {
@@ -9,6 +9,8 @@ const AdminLayout: React.FC = () => {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<AdminUser | null>(null);
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
     adminMe().then(setUser).catch(() => {
@@ -21,6 +23,10 @@ const AdminLayout: React.FC = () => {
     { path: '/admin/overview', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/admin/funnels', label: 'Funis', icon: Filter },
     { path: '/admin/leads', label: 'Leads', icon: Users },
+    { path: '/admin/email-marketing', label: 'Email Marketing', icon: Mail },
+    { path: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle },
+    { path: '/admin/webhooks', label: 'Webhooks', icon: Webhook },
+    { path: '/admin/plan', label: 'Meu Plano', icon: CreditCard },
     { path: '/admin/users', label: 'Usuários', icon: Shield, adminOnly: true },
   ];
 
@@ -43,17 +49,33 @@ const AdminLayout: React.FC = () => {
       </div>
 
       {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex flex-col w-72 border-r border-white/5 bg-neutral-900/50 backdrop-blur-xl relative z-10 h-full">
-        <div className="p-6 border-b border-white/5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
-              <span className="font-bold text-lg text-white">JF</span>
+      <aside className={cn(
+        "hidden lg:flex flex-col border-r border-white/5 bg-neutral-900/50 backdrop-blur-xl relative z-10 h-full transition-all duration-300",
+        isSidebarOpen ? "w-72" : "w-20"
+      )}>
+        <div className="p-6 border-b border-white/5 flex items-center justify-between">
+          {isSidebarOpen ? (
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                <span className="font-bold text-lg text-white">JF</span>
+              </div>
+              <div>
+                <h1 className="font-bold text-lg leading-tight">Jornada F.</h1>
+                <p className="text-xs text-neutral-400">Admin Console</p>
+              </div>
             </div>
-            <div>
-              <h1 className="font-bold text-lg leading-tight">Jornada F.</h1>
-              <p className="text-xs text-neutral-400">Admin Console</p>
-            </div>
-          </div>
+          ) : (
+             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/20 mx-auto">
+                <span className="font-bold text-lg text-white">JF</span>
+             </div>
+          )}
+          
+           <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className={cn("p-1.5 rounded-lg hover:bg-white/10 text-neutral-400 transition-colors", !isSidebarOpen && "absolute -right-3 top-8 bg-neutral-800 border border-white/10 shadow-xl")}
+          >
+             {isSidebarOpen ? <Menu className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          </button>
         </div>
 
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
@@ -66,9 +88,11 @@ const AdminLayout: React.FC = () => {
                   'flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group relative overflow-hidden',
                   isActive
                     ? 'text-white bg-white/5 shadow-inner'
-                    : 'text-neutral-400 hover:text-white hover:bg-white/5'
+                    : 'text-neutral-400 hover:text-white hover:bg-white/5',
+                  !isSidebarOpen && "justify-center px-2"
                 )
               }
+              title={!isSidebarOpen ? item.label : undefined}
             >
               {({ isActive }) => (
                 <>
@@ -78,8 +102,12 @@ const AdminLayout: React.FC = () => {
                     />
                   )}
                   <item.icon className={cn("w-5 h-5 relative z-10 transition-colors", isActive ? "text-purple-400" : "group-hover:text-purple-400")} />
-                  <span className="relative z-10 font-medium">{item.label}</span>
-                  {isActive && <ChevronRight className="w-4 h-4 ml-auto text-purple-400 relative z-10" />}
+                  {isSidebarOpen && (
+                    <>
+                        <span className="relative z-10 font-medium">{item.label}</span>
+                        {isActive && <ChevronRight className="w-4 h-4 ml-auto text-purple-400 relative z-10" />}
+                    </>
+                  )}
                 </>
               )}
             </NavLink>
@@ -89,10 +117,14 @@ const AdminLayout: React.FC = () => {
         <div className="p-4 border-t border-white/5">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-neutral-400 hover:text-red-400 hover:bg-red-500/5 transition-all duration-300 group"
+            className={cn(
+                "flex items-center gap-3 w-full px-4 py-3 rounded-xl text-neutral-400 hover:text-red-400 hover:bg-red-500/5 transition-all duration-300 group",
+                !isSidebarOpen && "justify-center px-2"
+            )}
+            title={!isSidebarOpen ? "Sair" : undefined}
           >
             <LogOut className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            <span className="font-medium">Sair do sistema</span>
+            {isSidebarOpen && <span className="font-medium">Sair do sistema</span>}
           </button>
         </div>
       </aside>
@@ -146,7 +178,12 @@ const AdminLayout: React.FC = () => {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto overflow-x-hidden relative z-10 pt-20 lg:pt-0">
-        <div className="w-full max-w-[1920px] mx-auto p-4 lg:p-8 space-y-8">
+        <div className={cn(
+          "w-full mx-auto transition-all",
+          location.pathname.includes('/admin/funnels') 
+            ? "p-2 max-w-full" 
+            : "p-4 lg:p-8 max-w-[1920px] space-y-8"
+        )}>
            {/* Header Area for Breadcrumbs/Title could go here */}
           <Outlet />
         </div>

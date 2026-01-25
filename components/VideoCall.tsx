@@ -30,10 +30,19 @@ const VideoCall: React.FC<VideoCallProps> = ({ onEndCall, doctorName, doctorAvat
     }
 
     if (callState === 'connected') {
+        // We rely on onEnded event of media elements.
+        // We ONLY use this interval for visual countdown if needed, but NOT for ending call automatically
+        // unless media is missing.
         interval = setInterval(() => {
             setTimeLeft(prev => {
                 if (prev <= 1) {
-                    handleHangup();
+                    // Only hangup if NO media is present to drive the flow
+                    if (!videoUrl && !audioUrl) {
+                        handleHangup();
+                        return 0;
+                    }
+                    // If media exists, let it finish naturally. 
+                    // Do NOT auto-hangup here to avoid premature cuts.
                     return 0;
                 }
                 return prev - 1;
@@ -41,7 +50,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ onEndCall, doctorName, doctorAvat
         }, 1000);
     }
     return () => clearInterval(interval);
-  }, [callState]);
+  }, [callState, videoUrl, audioUrl]); // Added videoUrl/audioUrl dependencies
 
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const audioRef = React.useRef<HTMLAudioElement>(null);
@@ -249,6 +258,13 @@ const VideoCall: React.FC<VideoCallProps> = ({ onEndCall, doctorName, doctorAvat
                             {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
                         </span>
                     </div>
+
+                    <button 
+                        onClick={handleHangup}
+                        className="bg-black/30 backdrop-blur-md px-4 py-2 rounded-full text-white text-xs font-medium hover:bg-black/50 transition-colors"
+                    >
+                        Pular Vídeo
+                    </button>
                     
                     {/* PIP (User Self View) */}
                     <div className="w-28 h-40 bg-gray-900 rounded-xl overflow-hidden border border-white/20 shadow-2xl">

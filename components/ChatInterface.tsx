@@ -5,7 +5,7 @@ import StatusBar from './StatusBar';
 import { cn } from '../lib/utils';
 
 interface ChatInterfaceProps {
-  script: ChatMessage[];
+  script?: ChatMessage[];
   onAction: (action: string) => void;
   startDelay?: number;
   initialHistory: ChatMessage[];
@@ -15,6 +15,10 @@ interface ChatInterfaceProps {
   onUserMessage?: (text: string) => void;
   theme?: 'dark' | 'light';
   audioConfig?: AudioConfig;
+  
+  // Graph Mode Props
+  currentMessage?: ChatMessage | null;
+  onMessageComplete?: () => void;
 }
 
 const AudioMessage: React.FC<{ duration: string; avatarUrl: string; audioUrl?: string }> = ({ duration, avatarUrl, audioUrl }) => {
@@ -22,6 +26,13 @@ const AudioMessage: React.FC<{ duration: string; avatarUrl: string; audioUrl?: s
   const [progress, setProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
   
+  // FIX: Force reload when audioUrl changes to avoid stale/empty src
+  useEffect(() => {
+      if (audioRef.current && audioUrl) {
+          audioRef.current.load();
+      }
+  }, [audioUrl]);
+
   const togglePlay = () => {
       if (!audioRef.current || !audioUrl) return;
 
@@ -101,7 +112,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   doctorAvatarUrl, 
   onUserMessage,
   theme = 'light',
-  audioConfig
+  audioConfig,
+  currentMessage,
+  onMessageComplete
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>(initialHistory);
   
@@ -164,19 +177,22 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   useEffect(() => {
     // Sync existing messages with updated script content (live preview)
-    setMessages(prev => {
-        let hasChanges = false;
-        const newMsgs = prev.map(m => {
-            const s = script.find(sm => sm.id === m.id);
-            if (s && (s.content !== m.content || s.mediaUrl !== m.mediaUrl || s.forceVideo !== m.forceVideo || JSON.stringify(s.quickReplies) !== JSON.stringify(m.quickReplies))) {
-                hasChanges = true;
-                return { ...m, ...s };
-            }
-            return m;
+    // Only in script mode or when editing
+    if (!currentMessage && script.length > 0) {
+        setMessages(prev => {
+            let hasChanges = false;
+            const newMsgs = prev.map(m => {
+                const s = script.find(sm => sm.id === m.id);
+                if (s && (s.content !== m.content || s.mediaUrl !== m.mediaUrl || s.forceVideo !== m.forceVideo || JSON.stringify(s.quickReplies) !== JSON.stringify(m.quickReplies))) {
+                    hasChanges = true;
+                    return { ...m, ...s };
+                }
+                return m;
+            });
+            return hasChanges ? newMsgs : prev;
         });
-        return hasChanges ? newMsgs : prev;
-    });
-  }, [script]);
+    }
+  }, [script, currentMessage]);
 
   useEffect(() => {
     if (messages.length > prevMessagesLength.current) {
@@ -190,7 +206,56 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     return () => clearTimeout(timer);
   }, [messages, typingActivity, onHistoryUpdate]);
 
+  // Graph Mode: Handle Incoming Message
   useEffect(() => {
+    if (!currentMessage) return;
+
+    // Avoid reprocessing same message ID if already present (unless it's an update?)
+    // But we need to allow re-entry if the user resets.
+    
+    if (currentMessage.sender === 'doctor') {
+         setTypingActivity(currentMessage.type === 'audio' ? 'audio' : 'text');
+         
+         const rawDuration = 1000 + (currentMessage.content.length * 15);
+         const typingDuration = currentMessage.type === 'audio' ? 2500 : Math.min(rawDuration, 5000);
+
+         const stepTimer = setTimeout(() => {
+           setTypingActivity(null);
+           
+           setMessages(prev => {
+               if (prev.find(m => m.id === currentMessage.id)) return prev;
+               playMessageSound('received');
+               return [...prev, currentMessage];
+           });
+           
+           if (currentMessage.action) {
+              setTimeout(() => onAction(currentMessage.action!), 4500);
+           } else if (currentMessage.requiresInput || (currentMessage.quickReplies && currentMessage.quickReplies.length > 0)) {
+              // Wait for user input (Text or Quick Reply) - DO NOT CALL onMessageComplete here
+           } else {
+              const listeningBuffer = currentMessage.type === 'audio' ? 3500 : 0;
+              const readDelay = 1000 + (currentMessage.delay || 0) + listeningBuffer;
+              
+              setTimeout(() => {
+                 onMessageComplete?.();
+              }, readDelay);
+           }
+         }, typingDuration);
+
+         return () => clearTimeout(stepTimer);
+    } else if (currentMessage.sender === 'user') {
+        // If the graph sends a 'user' message (simulation or history), just display it without typing
+        setMessages(prev => {
+            if (prev.find(m => m.id === currentMessage.id)) return prev;
+            return [...prev, currentMessage];
+        });
+        // Auto-advance if it's a simulated user message from graph
+        setTimeout(() => onMessageComplete?.(), 500);
+    }
+  }, [currentMessage]);
+
+  useEffect(() => {
+    if (currentMessage) return; // Disable script loop in graph mode
     if (currentIndex >= script.length) return;
 
     const msg = script[currentIndex];
@@ -240,8 +305,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   }, [currentIndex, script, startDelay, onAction]); 
 
   const handleSendMessage = (textOverride?: string) => {
-    const text = textOverride || inputValue;
-    if (!text.trim()) return;
+    // FIX: Ensure text is a string before trimming
+    const text = typeof textOverride === 'string' ? textOverride : inputValue;
+    
+    if (!text || (typeof text === 'string' && !text.trim())) return;
 
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -256,6 +323,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setMessages(prev => [...prev, userMsg]);
     setInputValue('');
     
+    // Graph Mode Handling
+    if (onMessageComplete) { // Assuming onMessageComplete is only passed in Graph Mode
+       // If we are here, it means the user sent a message.
+       // We should advance the graph.
+       setTimeout(() => onMessageComplete(), 500);
+       return;
+    }
+
     if (currentIndex < script.length) {
         const currentScriptMsg = script[currentIndex];
         
@@ -370,32 +445,44 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               )}
             >
               {msg.type === 'audio' ? (
-                <AudioMessage duration={msg.content} avatarUrl={doctorAvatarUrl} audioUrl={msg.mediaUrl} />
+                <AudioMessage 
+                    duration={msg.content && msg.content !== '0:00' && !msg.content.includes('[') ? msg.content : '0:15'} 
+                    avatarUrl={doctorAvatarUrl} 
+                    audioUrl={msg.mediaUrl} 
+                />
               ) : msg.type === 'image' ? (
                 <div className="flex flex-col gap-2">
                   <div className="rounded-lg overflow-hidden max-h-[300px]">
-                     <img src={msg.mediaUrl} alt="Imagem" className="w-full h-full object-cover" />
+                     {msg.mediaUrl ? (
+                         <img src={msg.mediaUrl} alt="Imagem" className="w-full h-full object-cover" />
+                     ) : (
+                         <div className="bg-gray-200 h-32 flex items-center justify-center text-gray-400 text-xs">Sem Imagem</div>
+                     )}
                   </div>
-                  {msg.content && <p className="whitespace-pre-wrap">{msg.content}</p>}
+                  {msg.content && !msg.content.startsWith('[') && <p className="whitespace-pre-wrap">{msg.content}</p>}
                 </div>
               ) : msg.type === 'video' ? (
                 <div className="flex flex-col gap-2">
                   <div className="rounded-lg overflow-hidden max-h-[300px]">
-                     <video 
-                       src={msg.mediaUrl} 
-                       className="w-full h-full object-cover" 
-                       controls={!msg.forceVideo} 
-                       playsInline
-                       onContextMenu={(e) => e.preventDefault()}
-                       onClick={(e) => {
-                         if (msg.forceVideo) {
-                           const v = e.currentTarget;
-                           v.paused ? v.play() : v.pause();
-                         }
-                       }}
-                     />
+                     {msg.mediaUrl ? (
+                         <video 
+                           src={msg.mediaUrl} 
+                           className="w-full h-full object-cover" 
+                           controls={!msg.forceVideo} 
+                           playsInline
+                           onContextMenu={(e) => e.preventDefault()}
+                           onClick={(e) => {
+                             if (msg.forceVideo) {
+                               const v = e.currentTarget;
+                               v.paused ? v.play() : v.pause();
+                             }
+                           }}
+                         />
+                     ) : (
+                         <div className="bg-gray-200 h-32 flex items-center justify-center text-gray-400 text-xs">Sem Vídeo</div>
+                     )}
                   </div>
-                  {msg.content && <p className="whitespace-pre-wrap">{msg.content}</p>}
+                  {msg.content && !msg.content.startsWith('[') && <p className="whitespace-pre-wrap">{msg.content}</p>}
                 </div>
               ) : (
                 <p className="whitespace-pre-wrap">{msg.content}</p>
