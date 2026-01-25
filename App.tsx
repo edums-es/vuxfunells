@@ -197,6 +197,12 @@ const FunnelExperience: React.FC = () => {
          return;
      }
 
+     if (currentNode.type === 'doctor') {
+         // Doctor node is just configuration, skip it
+         setTimeout(() => handleGraphNext(), 0);
+         return;
+     }
+
      switch (currentNode.type) {
        case 'incoming_call':
        case 'incoming-call':
@@ -355,9 +361,12 @@ const FunnelExperience: React.FC = () => {
   const definition: FunnelDefinition | null = funnel?.definition || null;
   const theme = definition?.theme || 'light';
 
-  const doctorName = definition?.doctor?.name || 'Dra. Ana';
-  const doctorAvatarUrl = definition?.doctor?.avatarUrl || 'https://picsum.photos/id/64/200/200';
-  const wallpaperUrl = definition?.doctor?.wallpaperUrl || 'https://picsum.photos/id/28/800/1200';
+  // Extract doctor info from Graph Nodes if available (Graph Mode priority)
+  const doctorNode = definition?.nodes?.find(n => n.type === 'doctor');
+  
+  const doctorName = doctorNode?.data?.name || definition?.doctor?.name || 'Dra. Ana';
+  const doctorAvatarUrl = doctorNode?.data?.avatarUrl || definition?.doctor?.avatarUrl || 'https://picsum.photos/id/64/200/200';
+  const wallpaperUrl = doctorNode?.data?.wallpaperUrl || definition?.doctor?.wallpaperUrl || 'https://picsum.photos/id/28/800/1200';
 
   const chatPart1 = definition?.chat?.part1 || [];
   const chatPart2 = definition?.chat?.part2 || [];
