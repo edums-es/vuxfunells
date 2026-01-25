@@ -70,7 +70,7 @@ const CustomNodeBase = ({ id, data, type, selected }: NodeProps & { type: string
   const Icon = config.icon;
   
   // Dados específicos podem vir no data
-  const customLabel = data.label || config.label;
+  const customLabel = String((data as any)?.label || config.label);
 
   const { deleteElements } = useReactFlow();
 
@@ -104,14 +104,20 @@ const CustomNodeBase = ({ id, data, type, selected }: NodeProps & { type: string
 
       {/* Corpo do Card */}
       <div className="p-4 bg-neutral-900 text-neutral-200 text-sm">
-        {data.preview && (
+          {(type === 'image' || type === 'video' || type === 'audio') && ((data as any)?.url || (data as any)?.mediaUrl) && (
           <div className="mb-2 rounded overflow-hidden relative aspect-video bg-black/50 flex items-center justify-center">
-             <ImageIcon className="w-6 h-6 text-neutral-600" />
+            {type === 'image' ? (
+                 <img src={String((data as any)?.url || (data as any)?.mediaUrl)} alt="Preview" className="w-full h-full object-cover" />
+            ) : type === 'video' ? (
+                <Video className="w-8 h-8 text-neutral-500" />
+            ) : (
+                <FileAudio className="w-8 h-8 text-neutral-500" />
+            )}
           </div>
         )}
         
         <div className="line-clamp-3 text-xs leading-relaxed opacity-80">
-          {data.previewText || data.content || '...'}
+          {(data as any)?.previewText || (data as any)?.content || '...'}
         </div>
 
         {/* Badges/Tags extras */}
@@ -126,14 +132,22 @@ const CustomNodeBase = ({ id, data, type, selected }: NodeProps & { type: string
         )}
       </div>
 
-      {/* Handles para conexões */}
+      {/* Handles para conexões - AUMENTADO PARA FACILITAR CONEXÃO */}
       {/* Start node only has source */}
       {type !== 'start' && (
-        <Handle type="target" position={Position.Top} className="!bg-white !w-3 !h-3 !border-2 !border-neutral-900" />
+        <Handle 
+          type="target" 
+          position={Position.Top} 
+          className="!bg-white !w-4 !h-4 !border-4 !border-neutral-900 hover:!bg-purple-400 hover:!w-5 hover:!h-5 transition-all" 
+        />
       )}
       {/* End node only has target */}
       {type !== 'end' && (
-        <Handle type="source" position={Position.Bottom} className="!bg-white !w-3 !h-3 !border-2 !border-neutral-900" />
+        <Handle 
+          type="source" 
+          position={Position.Bottom} 
+          className="!bg-white !w-4 !h-4 !border-4 !border-neutral-900 hover:!bg-purple-400 hover:!w-5 hover:!h-5 transition-all" 
+        />
       )}
     </div>
   );

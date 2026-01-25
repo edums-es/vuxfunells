@@ -446,7 +446,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             >
               {msg.type === 'audio' ? (
                 <AudioMessage 
-                    duration={msg.content && msg.content !== '0:00' && !msg.content.includes('[') ? msg.content : '0:15'} 
+                    duration={msg.content && msg.content.match(/^\d{1,2}:\d{2}$/) ? msg.content : '0:15'} 
                     avatarUrl={doctorAvatarUrl} 
                     audioUrl={msg.mediaUrl} 
                 />
@@ -459,7 +459,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                          <div className="bg-gray-200 h-32 flex items-center justify-center text-gray-400 text-xs">Sem Imagem</div>
                      )}
                   </div>
-                  {msg.content && !msg.content.startsWith('[') && <p className="whitespace-pre-wrap">{msg.content}</p>}
+                  {msg.content && !/^https?:\/\//.test(msg.content) && msg.content !== msg.mediaUrl && (
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                  )}
                 </div>
               ) : msg.type === 'video' ? (
                 <div className="flex flex-col gap-2">
@@ -482,7 +484,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                          <div className="bg-gray-200 h-32 flex items-center justify-center text-gray-400 text-xs">Sem Vídeo</div>
                      )}
                   </div>
-                  {msg.content && !msg.content.startsWith('[') && <p className="whitespace-pre-wrap">{msg.content}</p>}
+                  {msg.content && !/^https?:\/\//.test(msg.content) && msg.content !== msg.mediaUrl && (
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                  )}
                 </div>
               ) : (
                 <p className="whitespace-pre-wrap">{msg.content}</p>

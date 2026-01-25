@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { adminTokenStorage, adminMe, AdminUser } from '../../lib/api';
-import { LayoutDashboard, Filter, Users, LogOut, Menu, X, ChevronRight, Shield, Mail, Webhook, CreditCard, MessageCircle } from 'lucide-react';
+import { LayoutDashboard, Filter, Users, LogOut, Menu, X, ChevronRight, Shield, Mail, Webhook, CreditCard, MessageCircle, ShoppingCart } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 const AdminLayout: React.FC = () => {
@@ -23,6 +23,7 @@ const AdminLayout: React.FC = () => {
     { path: '/admin/overview', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/admin/funnels', label: 'Funis', icon: Filter },
     { path: '/admin/leads', label: 'Leads', icon: Users },
+    { path: '/admin/checkout', label: 'Checkout', icon: ShoppingCart },
     { path: '/admin/email-marketing', label: 'Email Marketing', icon: Mail },
     { path: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle },
     { path: '/admin/webhooks', label: 'Webhooks', icon: Webhook },

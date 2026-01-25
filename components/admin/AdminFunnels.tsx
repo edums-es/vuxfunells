@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Settings, MessageSquare, Star, ShoppingCart, Tag, Plus, Trash2, ArrowUp, ArrowDown, Check, CheckCircle, ShieldCheck, HelpCircle, Code, AlertTriangle, X, ChevronRight, ChevronDown, Save, Play, Upload, Layout, Video, Image, Link, Mail, Sun, Moon, Smartphone, Monitor, Music, ArrowLeft, Download, FileJson, MoreVertical } from 'lucide-react';
+import { Settings, MessageSquare, Star, ShoppingCart, Tag, Plus, Trash2, ArrowUp, ArrowDown, Check, CheckCircle, ShieldCheck, HelpCircle, Code, AlertTriangle, X, ChevronRight, ChevronDown, Save, Play, Upload, Layout, Video, Image, Link, Mail, Sun, Moon, Smartphone, Monitor, Music, ArrowLeft, Download, FileJson, MoreVertical, MessageCircle } from 'lucide-react';
 import { adminCreateFunnel, adminListFunnels, adminUpdateFunnel, adminUploadFile, adminDeleteFunnel } from '../../lib/api';
 import type { AdminFunnel } from '../../lib/api';
 import type { ChatMessage, CheckoutConfig, FunnelDefinition, OfferConfig, ReviewData, CommentData, CheckoutBlock, VideoCallConfig, IntegrationsConfig, MarketingConfig } from '../../types';
@@ -186,15 +186,35 @@ const TextInput: React.FC<{
   placeholder?: string;
   type?: 'text' | 'url';
   className?: string;
-}> = ({ value, onChange, placeholder, type = 'text', className }) => (
-  <input
-    value={value}
-    onChange={(e) => onChange(e.target.value)}
-    placeholder={placeholder}
-    type={type}
-    className={cn(inputBaseClass, className)}
-  />
-);
+}> = ({ value, onChange, placeholder, type = 'text', className }) => {
+    return (
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        type={type}
+        className={cn(inputBaseClass, className)}
+      />
+    );
+};
+
+const TextArea: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  rows?: number;
+  className?: string;
+}> = ({ value, onChange, placeholder, rows = 3, className }) => {
+    return (
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={rows}
+        className={cn(inputBaseClass, "resize-none", className)}
+      />
+    );
+};
 
 const NumberInput: React.FC<{
   value: number;
@@ -212,20 +232,6 @@ const NumberInput: React.FC<{
     min={min}
     step={step}
     className={cn(inputBaseClass, className)}
-  />
-);
-
-const TextArea: React.FC<{ value: string; onChange: (value: string) => void; rows?: number; className?: string }> = ({
-  value,
-  onChange,
-  rows = 3,
-  className
-}) => (
-  <textarea
-    value={value}
-    onChange={(e) => onChange(e.target.value)}
-    rows={rows}
-    className={cn(inputBaseClass, "resize-y min-h-[80px]", className)}
   />
 );
 
@@ -389,7 +395,7 @@ const AdminFunnels: React.FC = () => {
   const [isZenMode, setIsZenMode] = useState(false);
 
   const active = useMemo(() => funnels.find((f) => f.id === activeId) || null, [funnels, activeId]);
-
+  
   const updateGraphNode = (nodeId: string, dataPatch: any) => {
       setDraftDef(prev => {
           if (!prev || !prev.nodes) return prev;
@@ -397,6 +403,10 @@ const AdminFunnels: React.FC = () => {
               n.id === nodeId ? { ...n, data: { ...n.data, ...dataPatch } } : n
           );
           return { ...prev, nodes: newNodes };
+      });
+      setEditingNode((prev) => {
+        if (!prev || prev.id !== nodeId) return prev;
+        return { ...prev, data: { ...(prev.data || {}), ...dataPatch } };
       });
   };
 
@@ -407,7 +417,6 @@ const AdminFunnels: React.FC = () => {
       });
   };
 
-  // Helper to determine if we are in graph mode for a specific node
   const isGraphNode = (id?: string) => {
       return !!(id && draftDef?.nodes && draftDef.nodes.length > 0);
   };
@@ -895,11 +904,65 @@ const AdminFunnels: React.FC = () => {
       setDraftDef((prev) => {
         if (!prev) return prev;
         const items = prev.reviews.items.slice();
-        const nextId = (items.reduce((acc, r) => Math.max(acc, Number(r.id || 0)), 0) || 0) + 1;
-        items.push({ id: nextId, name: '', age: 30, location: '', text: '', likes: '0', comments: [] });
+        const nextId = (items.reduce((acc, r) => Math.max(acc, Number((r as any).id || 0)), 0) || 0) + 1;
+        items.push({ id: nextId, name: '', age: 30, location: '', text: '', likes: '0', comments: [] } as any);
         return { ...prev, reviews: { ...prev.reviews, items } };
       });
     };
+
+  const addQuickReply = (nodeId: string, value: string = '') => {
+      if (!editingNode || editingNode.id !== nodeId) return;
+      
+      const currentReplies = editingNode.data.quickReplies || [];
+      const newReplies = [...currentReplies, value];
+      
+      // Force update both graph and local editing state immediately
+      updateGraphNode(nodeId, { quickReplies: newReplies });
+      setEditingNode(prev => prev ? { ...prev, data: { ...prev.data, quickReplies: newReplies } } : null);
+  };
+
+  const updateQuickReply = (nodeId: string, index: number, value: string) => {
+      if (!editingNode || editingNode.id !== nodeId) return;
+      
+      const currentReplies = [...(editingNode.data.quickReplies || [])];
+      currentReplies[index] = value;
+      updateGraphNode(nodeId, { quickReplies: currentReplies });
+      // We don't need to force update editingNode here because TextInput handles its own state
+      // and we want debounce for typing.
+  };
+
+  const removeQuickReply = (nodeId: string, index: number) => {
+      if (!editingNode || editingNode.id !== nodeId) return;
+      
+      const currentReplies = [...(editingNode.data.quickReplies || [])];
+      currentReplies.splice(index, 1);
+      
+      // Force update both graph and local editing state immediately
+      updateGraphNode(nodeId, { quickReplies: currentReplies });
+      setEditingNode(prev => prev ? { ...prev, data: { ...prev.data, quickReplies: currentReplies } } : null);
+  };
+
+  const handleFileUpload = async (file: File, type: 'image' | 'audio' | 'video', nodeId: string) => {
+      const fakeUrl = URL.createObjectURL(file);
+      
+      // Immediate feedback
+      const patch = type === 'image' ? { url: fakeUrl, mediaUrl: fakeUrl }
+                  : type === 'audio' ? { audioUrl: fakeUrl, url: fakeUrl }
+                  : { videoUrl: fakeUrl, url: fakeUrl };
+                  
+      updateGraphNode(nodeId, patch);
+      // Update local state to show preview immediately in modal
+      setEditingNode(prev => prev ? { ...prev, data: { ...prev.data, ...patch } } : null);
+      
+      // Simulate network delay (optional, can be removed for instant feel)
+      // await new Promise(resolve => setTimeout(resolve, 1000));
+  };
+
+  const handleRemoveMedia = (nodeId: string) => {
+      const patch = { url: '', mediaUrl: '', audioUrl: '', videoUrl: '', content: '' };
+      updateGraphNode(nodeId, patch);
+      setEditingNode(prev => prev ? { ...prev, data: { ...prev.data, ...patch } } : null);
+  };
 
     const removeReviewItem = (idx: number) => {
       setDraftDef((prev) => {
@@ -1198,7 +1261,7 @@ const AdminFunnels: React.FC = () => {
             </div>
             <div>
                 <FieldLabel label="Volume (0.0 - 1.0)" />
-                <NumberInput value={data.backgroundMusicVolume ?? 0.1} onChange={(v) => update({ backgroundMusicVolume: v })} min={0} max={1} step={0.1} />
+                <NumberInput value={data.backgroundMusicVolume ?? 0.1} onChange={(v) => update({ backgroundMusicVolume: v })} min={0} step={0.1} />
             </div>
             <Toggle checked={data.messageSoundEnabled ?? true} onChange={(v) => update({ messageSoundEnabled: v })} label="Sons de Mensagem" />
         </div>
@@ -1231,7 +1294,36 @@ const AdminFunnels: React.FC = () => {
                     </div>
                     <div>
                         <FieldLabel label="Conteúdo / URL" />
-                        <TextArea value={m.content} onChange={(v) => update({ content: v })} rows={4} />
+                        <TextArea
+                          value={m.type === 'text' ? (m.content || '') : (m.mediaUrl || m.url || m.content || '')}
+                          onChange={(v) => {
+                            if (m.type === 'text') {
+                              update({ content: v });
+                            } else {
+                              update({ mediaUrl: v, url: v });
+                            }
+                          }}
+                          rows={4}
+                        />
+                        {m.type !== 'text' && (m.mediaUrl || m.url) ? (
+                          <div className="mt-2 rounded-xl overflow-hidden border border-white/10 bg-black/40">
+                            {m.type === 'image' ? (
+                              <img src={m.mediaUrl || m.url} alt="preview" className="w-full h-48 object-cover" />
+                            ) : m.type === 'audio' ? (
+                              <div className="p-3">
+                                <audio controls src={m.mediaUrl || m.url} className="w-full" />
+                              </div>
+                            ) : null}
+                            <div className="p-2 border-t border-white/10 flex justify-end">
+                              <button
+                                onClick={() => update({ mediaUrl: '', url: '', content: '' })}
+                                className="px-3 py-2 rounded-lg text-xs font-bold bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/20"
+                              >
+                                Remover mídia
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
                         {m.type !== 'text' && (
                             <div className="flex flex-col gap-2">
                                 {m.type === 'video' || m.type === 'video-call' ? (
@@ -1262,7 +1354,7 @@ const AdminFunnels: React.FC = () => {
                                                     console.log('[Graph] Uploading file...', file.name);
                                                     const res = await adminUploadFile(file);
                                                     console.log('[Graph] Upload complete:', res.url);
-                                                    update({ mediaUrl: res.url });
+                                                    update({ mediaUrl: res.url, url: res.url });
                                                 } catch (err) { 
                                                     console.error('[Graph] Upload failed:', err);
                                                     alert('Erro ao enviar arquivo: ' + (err as Error).message); 
@@ -1934,6 +2026,46 @@ const AdminFunnels: React.FC = () => {
         );
     };
 
+    const renderWhatsappForm = () => {
+        if (!editingNode?.id) return null;
+        const data = editingNode.data;
+        const update = (patch: any) => updateGraphNode(editingNode.id!, patch);
+
+        return (
+            <div className="space-y-6">
+                <div className="text-xs text-purple-400 mb-2 font-mono">MODO GRAFO: NÓ {editingNode.id}</div>
+                <div className="bg-green-500/5 p-4 rounded-xl border border-green-500/20 space-y-4">
+                    <div className="flex items-center gap-2 text-green-400 mb-2">
+                        <MessageCircle className="w-5 h-5" />
+                        <span className="font-bold text-sm">Configuração WhatsApp</span>
+                    </div>
+                    
+                    <div>
+                        <FieldLabel label="Mensagem Inicial (Template ou Texto)" />
+                        <textarea
+                            value={data.message || ''}
+                            onChange={(e) => update({ message: e.target.value })}
+                            className="w-full h-32 bg-neutral-900 border border-white/10 rounded-xl p-3 text-sm text-neutral-200 outline-none focus:ring-2 focus:ring-green-500/30 resize-none"
+                            placeholder="Olá, vi seu interesse no produto..."
+                        />
+                    </div>
+
+                    <div>
+                        <FieldLabel label="Número de Destino (Opcional - Redirecionamento)" />
+                        <TextInput 
+                            value={data.phone || ''} 
+                            onChange={(v) => update({ phone: v })} 
+                            placeholder="5511999999999" 
+                        />
+                        <p className="text-xs text-neutral-500 mt-1">
+                            Se preenchido, o usuário será redirecionado para este número. Se vazio, será enviado um disparo automático via API (se configurada).
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     const handleAddNode = (type: string, payload: any, position?: { x: number, y: number }) => {
         if (!draftDef) return;
 
@@ -2014,8 +2146,15 @@ const AdminFunnels: React.FC = () => {
             };
         });
 
-        // Set as editing
-        setEditingNode({ type, data: payload, id: newNodeId } as any);
+        // Set as editing (Wait for state update)
+        setTimeout(() => {
+             // Fetch the freshly created node data to ensure we edit the real object
+             setEditingNode({ 
+                 type, 
+                 data: { ...payload, label: payload.label || type }, // Ensure initial data is consistent
+                 id: newNodeId 
+             });
+        }, 50);
     };
 
     return (
@@ -2098,6 +2237,7 @@ const AdminFunnels: React.FC = () => {
                         {editingNode.type === 'user_input' && renderUserInputForm()}
                         {editingNode.type === 'api_action' && renderApiActionForm()}
                         {editingNode.type === 'redirect' && renderRedirectForm()}
+                        {editingNode.type === 'whatsapp' && renderWhatsappForm()}
                         {editingNode.type === 'end' && <div className="text-neutral-400 text-sm">Este nó finaliza o fluxo. Nenhuma configuração necessária.</div>}
                     </div>
                 </>
@@ -2209,6 +2349,7 @@ const AdminFunnels: React.FC = () => {
                       <TextInput value={nameDraft} onChange={setNameDraft} placeholder="Ex: Funil VSL 01" className="text-lg font-semibold" />
                     </div>
                     <div className="flex items-end justify-end gap-3 pb-1">
+                      {/* 
                       {active && (
                         <div className="flex items-center gap-4 text-xs font-mono text-neutral-500 bg-neutral-900/50 px-3 py-2 rounded-lg border border-white/5">
                           <span>ID: {active.id.slice(0, 8)}...</span>
@@ -2216,6 +2357,7 @@ const AdminFunnels: React.FC = () => {
                           <span>UPDATED: {new Date().toLocaleDateString()}</span>
                         </div>
                       )}
+                      */}
                       <button
                         onClick={() => deleteFunnel()}
                         disabled={!active || saving}

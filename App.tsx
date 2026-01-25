@@ -22,6 +22,7 @@ import AdminEmailMarketing from './components/admin/AdminEmailMarketing';
 import AdminWebhooks from './components/admin/AdminWebhooks';
 import AdminPlan from './components/admin/AdminPlan';
 import AdminWhatsapp from './components/admin/AdminWhatsapp';
+import AdminCheckout from './components/admin/AdminCheckout';
 
 const ScreenWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="w-full h-full animate-in fade-in duration-500 fill-mode-forwards">
@@ -825,6 +826,7 @@ const App: React.FC = () => {
           <Route path="overview" element={<AdminOverview />} />
           <Route path="funnels" element={<AdminFunnels />} />
           <Route path="leads" element={<AdminLeads />} />
+          <Route path="checkout" element={<AdminCheckout />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="email-marketing" element={<AdminEmailMarketing />} />
           <Route path="whatsapp" element={<AdminWhatsapp />} />

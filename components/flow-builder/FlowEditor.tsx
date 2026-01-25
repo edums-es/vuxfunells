@@ -29,7 +29,7 @@ import { nodeTypes } from './CustomNodes';
 export const FlowEditor: React.FC<{
   funnelDefinition: FunnelDefinition;
   onSave: (def: FunnelDefinition) => void;
-  onNodeClick?: (type: string, data: any) => void;
+  onNodeClick?: (type: string, data: any, id: string) => void;
   onAddNode?: (type: string, data: any, position?: { x: number, y: number }) => void;
 }> = (props) => {
   return (
@@ -42,7 +42,7 @@ export const FlowEditor: React.FC<{
 const FlowEditorContent: React.FC<{
   funnelDefinition: FunnelDefinition;
   onSave: (def: FunnelDefinition) => void;
-  onNodeClick?: (type: string, data: any) => void;
+  onNodeClick?: (type: string, data: any, id: string) => void;
   onAddNode?: (type: string, data: any, position?: { x: number, y: number }) => void;
 }> = ({ funnelDefinition, onSave, onNodeClick, onAddNode }) => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
