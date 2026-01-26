@@ -89,7 +89,7 @@ const AdminPlan: React.FC = () => {
         <div className="space-y-6">
           <UsageCard 
             title="Leads Capturados" 
-            count={metrics?.totalLeads !== undefined ? metrics.totalLeads.toString() : '0'} 
+            count={metrics?.totals?.totalLeads !== undefined ? metrics.totals.totalLeads.toString() : '0'} 
             total="Ilimitado" 
             percent={5} 
             icon={Users}

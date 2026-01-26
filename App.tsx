@@ -364,7 +364,7 @@ const FunnelExperience: React.FC = () => {
   // Extract doctor info from Graph Nodes if available (Graph Mode priority)
   const doctorNode = definition?.nodes?.find(n => n.type === 'doctor');
   
-  const doctorName = doctorNode?.data?.name || definition?.doctor?.name || 'Dra. Ana';
+  const doctorName = doctorNode?.data?.name || doctorNode?.data?.label || definition?.doctor?.name || 'Dra. Ana';
   const doctorAvatarUrl = doctorNode?.data?.avatarUrl || definition?.doctor?.avatarUrl || 'https://picsum.photos/id/64/200/200';
   const wallpaperUrl = doctorNode?.data?.wallpaperUrl || definition?.doctor?.wallpaperUrl || 'https://picsum.photos/id/28/800/1200';
 

@@ -31,6 +31,7 @@ export const FlowEditor: React.FC<{
   onSave: (def: FunnelDefinition) => void;
   onNodeClick?: (type: string, data: any, id: string) => void;
   onAddNode?: (type: string, data: any, position?: { x: number, y: number }) => void;
+  onRegisterGetDefinition?: (getDef: (() => FunnelDefinition) | null) => void;
 }> = (props) => {
   return (
     <ReactFlowProvider>
@@ -44,11 +45,36 @@ const FlowEditorContent: React.FC<{
   onSave: (def: FunnelDefinition) => void;
   onNodeClick?: (type: string, data: any, id: string) => void;
   onAddNode?: (type: string, data: any, position?: { x: number, y: number }) => void;
-}> = ({ funnelDefinition, onSave, onNodeClick, onAddNode }) => {
+  onRegisterGetDefinition?: (getDef: (() => FunnelDefinition) | null) => void;
+}> = ({ funnelDefinition, onSave, onNodeClick, onAddNode, onRegisterGetDefinition }) => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  const latestRef = useRef<{ funnelDefinition: FunnelDefinition; nodes: Node[]; edges: Edge[] }>({
+    funnelDefinition,
+    nodes: [],
+    edges: []
+  });
+
+  useEffect(() => {
+    latestRef.current = { funnelDefinition, nodes, edges };
+  }, [funnelDefinition, nodes, edges]);
+
+  useEffect(() => {
+    if (!onRegisterGetDefinition) return;
+    const getDef = () => {
+      const latest = latestRef.current;
+      return {
+        ...latest.funnelDefinition,
+        nodes: latest.nodes as any,
+        edges: latest.edges as any,
+        layout: latest.nodes.reduce((acc, n) => ({ ...acc, [n.id]: n.position }), {})
+      };
+    };
+    onRegisterGetDefinition(getDef);
+    return () => onRegisterGetDefinition(null);
+  }, [onRegisterGetDefinition]);
 
   // Helper to get position from layout or default
   const getPosition = (id: string, defaultX: number, defaultY: number) => {
@@ -119,7 +145,14 @@ const FlowEditorContent: React.FC<{
           initialNodes.push({
               id: 'config-doctor',
               type: 'doctor',
-              data: { label: funnelDefinition.doctor.name, preview: true },
+              data: {
+                label: funnelDefinition.doctor.name,
+                name: funnelDefinition.doctor.name,
+                role: funnelDefinition.doctor.role,
+                avatarUrl: funnelDefinition.doctor.avatarUrl,
+                wallpaperUrl: funnelDefinition.doctor.wallpaperUrl,
+                preview: true
+              },
               position: getPosition('config-doctor', xPos - 220, yPos),
           });
       }

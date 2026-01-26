@@ -238,21 +238,21 @@ const AdminLeads: React.FC = () => {
                       <div key={idx} className="relative">
                         <div className={cn(
                           "absolute -left-[39px] w-5 h-5 rounded-full border-4 border-neutral-900",
-                          ev.eventType === 'purchase' ? "bg-green-500" :
-                          ev.eventType === 'checkout_started' ? "bg-yellow-500" :
-                          ev.eventType === 'funnel_start' ? "bg-blue-500" : "bg-neutral-600"
+                          ev.type === 'purchase' ? "bg-green-500" :
+                          ev.type === 'checkout_started' ? "bg-yellow-500" :
+                          ev.type === 'funnel_start' ? "bg-blue-500" : "bg-neutral-600"
                         )} />
                         <div className="flex flex-col gap-1">
-                          <span className="text-xs text-neutral-500 font-mono">{formatDt(ev.createdAt)}</span>
+                          <span className="text-xs text-neutral-500 font-mono">{formatDt(ev.ts)}</span>
                           <span className="font-medium text-white">
-                            {ev.eventType === 'purchase' ? 'Realizou uma compra' :
-                             ev.eventType === 'checkout_started' ? 'Iniciou checkout' :
-                             ev.eventType === 'funnel_start' ? 'Iniciou funil' :
-                             ev.eventType}
+                            {ev.type === 'purchase' ? 'Realizou uma compra' :
+                             ev.type === 'checkout_started' ? 'Iniciou checkout' :
+                             ev.type === 'funnel_start' ? 'Iniciou funil' :
+                             ev.type}
                           </span>
-                          {ev.details && Object.keys(ev.details as object).length > 0 && (
+                          {ev.payload && Object.keys(ev.payload as object).length > 0 && (
                              <pre className="mt-2 text-xs bg-black/30 p-2 rounded border border-white/5 overflow-x-auto text-neutral-400">
-                               {JSON.stringify(ev.details, null, 2)}
+                               {JSON.stringify(ev.payload, null, 2)}
                              </pre>
                           )}
                         </div>

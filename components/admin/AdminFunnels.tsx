@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Settings, MessageSquare, Star, ShoppingCart, Tag, Plus, Trash2, ArrowUp, ArrowDown, Check, CheckCircle, ShieldCheck, HelpCircle, Code, AlertTriangle, X, ChevronRight, ChevronDown, Save, Play, Upload, Layout, Video, Image, Link, Mail, Sun, Moon, Smartphone, Monitor, Music, ArrowLeft, Download, FileJson, MoreVertical, MessageCircle } from 'lucide-react';
 import { adminCreateFunnel, adminListFunnels, adminUpdateFunnel, adminUploadFile, adminDeleteFunnel } from '../../lib/api';
 import type { AdminFunnel } from '../../lib/api';
@@ -393,6 +393,7 @@ const AdminFunnels: React.FC = () => {
   const [newFunnelType, setNewFunnelType] = useState<'default' | 'empty'>('default');
   const [editingNode, setEditingNode] = useState<{ type: string; data: any; id?: string } | null>(null);
   const [isZenMode, setIsZenMode] = useState(false);
+  const getFlowDefinitionRef = useRef<(() => FunnelDefinition) | null>(null);
 
   const active = useMemo(() => funnels.find((f) => f.id === activeId) || null, [funnels, activeId]);
   
@@ -461,7 +462,10 @@ const AdminFunnels: React.FC = () => {
     setSaving(true);
     setError(null);
     try {
-      const def = mode === 'json' ? (JSON.parse(draftJson) as FunnelDefinition) : draftDef;
+      const def =
+        mode === 'json'
+          ? (JSON.parse(draftJson) as FunnelDefinition)
+          : (getFlowDefinitionRef.current ? getFlowDefinitionRef.current() : draftDef);
       if (!def) throw new Error('Definição vazia');
       const res = await adminUpdateFunnel(active.id, { name: nameDraft.trim() || active.name, definition: def });
       setFunnels((prev) => prev.map((f) => (f.id === active.id ? res.funnel : f)));
@@ -2172,6 +2176,9 @@ const AdminFunnels: React.FC = () => {
              onSave={(newDef) => setDraftDef(newDef)}
              onNodeClick={(type, data, id) => setEditingNode({ type, data, id })}
              onAddNode={handleAddNode}
+             onRegisterGetDefinition={(getDef) => {
+               getFlowDefinitionRef.current = getDef;
+             }}
            />
         </div>
 

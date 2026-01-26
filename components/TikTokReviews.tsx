@@ -138,7 +138,9 @@ const TikTokReviews: React.FC<TikTokReviewsProps> = ({ reviews = [], onFinish, t
             {/* Background Video */}
             <div className="absolute inset-0 bg-black">
                <video 
-                  ref={el => videoRefs.current[index] = el}
+                  ref={(el) => {
+                    videoRefs.current[index] = el;
+                  }}
                   src={review.videoUrl} 
                   className="w-full h-full object-cover"
                   loop

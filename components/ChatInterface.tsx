@@ -543,7 +543,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
 
         {inputValue ? (
-            <button onClick={handleSendMessage} className="mb-1.5 transform transition active:scale-95">
+            <button onClick={() => handleSendMessage()} className="mb-1.5 transform transition active:scale-95">
                 <div className="w-8 h-8 bg-[#007AFF] rounded-full flex items-center justify-center">
                     <Send className="w-4 h-4 text-white ml-0.5" />
                 </div>
