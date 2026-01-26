@@ -36,6 +36,13 @@ function formatMoneyCents(valueCents: number) {
   return (n / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+function toSeconds(input: unknown, fallbackSeconds: number) {
+  const n = Number(input);
+  if (!Number.isFinite(n) || n <= 0) return fallbackSeconds;
+  if (n > 1000) return Math.max(1, Math.round(n / 1000));
+  return Math.max(1, Math.round(n));
+}
+
 const OfferScreen: React.FC<{
   title: string;
   subtitle: string;
@@ -203,6 +210,11 @@ const FunnelExperience: React.FC = () => {
          return;
      }
 
+     if (currentNode.type === 'config-audio') {
+         setTimeout(() => handleGraphNext(), 0);
+         return;
+     }
+
      switch (currentNode.type) {
        case 'incoming_call':
        case 'incoming-call':
@@ -236,6 +248,18 @@ const FunnelExperience: React.FC = () => {
        case 'end':
          handleStepTransition(ScreenStep.THANK_YOU);
          break;
+       case 'whatsapp': {
+         const rawPhone = String(currentNode.data?.phone || '');
+         const phone = rawPhone.replace(/\D/g, '');
+         const message = String(currentNode.data?.message || '');
+         if (phone) {
+           const url = `https://wa.me/${phone}${message ? `?text=${encodeURIComponent(message)}` : ''}`;
+           window.location.href = url;
+           return;
+         }
+         handleGraphNext();
+         break;
+       }
        default:
          // message, image, video, audio, user_input
          // We use CHAT_PART_1 as the generic "Chat Screen" for the graph
@@ -363,10 +387,12 @@ const FunnelExperience: React.FC = () => {
 
   // Extract doctor info from Graph Nodes if available (Graph Mode priority)
   const doctorNode = definition?.nodes?.find(n => n.type === 'doctor');
+  const audioNode = definition?.nodes?.find(n => n.type === 'config-audio');
   
   const doctorName = doctorNode?.data?.name || doctorNode?.data?.label || definition?.doctor?.name || 'Dra. Ana';
   const doctorAvatarUrl = doctorNode?.data?.avatarUrl || definition?.doctor?.avatarUrl || 'https://picsum.photos/id/64/200/200';
   const wallpaperUrl = doctorNode?.data?.wallpaperUrl || definition?.doctor?.wallpaperUrl || 'https://picsum.photos/id/28/800/1200';
+  const audioConfig = { ...(definition?.audio || {}), ...((audioNode?.data || {}) as any) };
 
   const chatPart1 = definition?.chat?.part1 || [];
   const chatPart2 = definition?.chat?.part2 || [];
@@ -442,7 +468,7 @@ const FunnelExperience: React.FC = () => {
             <IncomingCall 
               doctorName={doctorName}
               doctorAvatarUrl={doctorAvatarUrl}
-              duration={graphMode && currentNode?.data ? currentNode.data.duration : incomingCallConfig?.duration}
+              duration={toSeconds(graphMode && currentNode?.data ? currentNode.data.duration : incomingCallConfig?.duration, 12)}
               ringtoneUrl={graphMode && currentNode?.data ? currentNode.data.ringtoneUrl : incomingCallConfig?.ringtoneUrl}
               voiceUrl={graphMode && currentNode?.data ? currentNode.data.voiceUrl : incomingCallConfig?.voiceUrl}
               theme={theme}
@@ -487,6 +513,7 @@ const FunnelExperience: React.FC = () => {
               initialHistory={graphMode ? chatHistory : []}
               startDelay={1500}
               onHistoryUpdate={handleHistoryUpdate}
+              audioConfig={audioConfig}
               onAction={(action) => {
                   if (graphMode) {
                       handleGraphNext(action);
@@ -519,6 +546,7 @@ const FunnelExperience: React.FC = () => {
       case ScreenStep.VIDEO_CALL:
         // DEBUG: Ensure video URL is valid
         const finalVideoUrl = currentNode?.data?.url || currentNode?.data?.videoUrl || videoCallConfig?.videoUrl;
+        const finalAudioUrl = currentNode?.data?.audioUrl || videoCallConfig?.audioUrl;
         
         return (
           <ScreenWrapper key={ScreenStep.VIDEO_CALL}>
@@ -526,8 +554,8 @@ const FunnelExperience: React.FC = () => {
               doctorName={doctorName}
               doctorAvatarUrl={doctorAvatarUrl}
               videoUrl={finalVideoUrl}
-              audioUrl={videoCallConfig?.audioUrl}
-              duration={videoCallConfig?.duration}
+              audioUrl={finalAudioUrl}
+              duration={toSeconds(currentNode?.data?.duration ?? videoCallConfig?.duration, 60)}
               onEndCall={() => {
                   console.log('Video Call Ended');
                   if (graphMode) {
@@ -549,6 +577,7 @@ const FunnelExperience: React.FC = () => {
               initialHistory={chatHistory} 
               startDelay={800}
               onHistoryUpdate={handleHistoryUpdate}
+              audioConfig={audioConfig}
               onAction={handleChatPart2Action}
               onUserMessage={(text) => track('user_message', ScreenStep.CHAT_PART_2, { text })}
             />

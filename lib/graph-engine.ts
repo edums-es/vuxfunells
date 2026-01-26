@@ -44,12 +44,29 @@ export class GraphEngine {
   }
 
   public next(output?: string): FlowNode | null {
-    if (!this.currentNodeId || !this.definition.edges) return null;
+    if (!this.currentNodeId) return null;
+    const allEdges = this.definition.edges || [];
 
     // Find edges originating from current node
-    const edges = this.definition.edges.filter(e => e.source === this.currentNodeId);
+    const edges = allEdges.filter(e => e.source === this.currentNodeId);
 
-    if (edges.length === 0) return null;
+    const getNodeType = (nodeId: string) => this.definition.nodes?.find((n) => n.id === nodeId)?.type || null;
+    const currentType = getNodeType(this.currentNodeId);
+    const isConfigNode = (t: string | null) => t === 'doctor' || t === 'config-audio';
+
+    if (edges.length === 0) {
+      if (isConfigNode(currentType)) {
+        const startId = this.definition.startNodeId || 'start';
+        const startEdges = allEdges.filter((e) => e.source === startId);
+        const candidate = startEdges.find((e) => !isConfigNode(getNodeType(e.target))) || startEdges[0];
+        if (candidate) {
+          this.currentNodeId = candidate.target;
+          this.history.push(this.currentNodeId);
+          return this.getCurrentNode();
+        }
+      }
+      return null;
+    }
 
     let targetEdge: FlowEdge | undefined;
 
@@ -61,14 +78,8 @@ export class GraphEngine {
 
     // Fallback to default edge (first one or unlabelled)
     if (!targetEdge) {
-        // Heuristic: Avoid config nodes if multiple edges exist (common in Start node)
-        if (edges.length > 1) {
-             targetEdge = edges.find(e => !e.target.startsWith('config-'));
-        }
-        
-        if (!targetEdge) {
-             targetEdge = edges[0];
-        }
+        const preferred = edges.find((e) => !isConfigNode(getNodeType(e.target)));
+        targetEdge = preferred || edges[0];
     }
 
     if (targetEdge) {

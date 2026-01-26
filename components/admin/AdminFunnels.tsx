@@ -1239,9 +1239,12 @@ const AdminFunnels: React.FC = () => {
     const renderAudioForm = () => {
         const isGraph = editingNode?.id && isGraphNode(editingNode.id);
         const data = isGraph ? editingNode!.data : def.audio || {};
-        const update = isGraph 
-            ? (patch: any) => updateGraphNode(editingNode!.id!, patch)
-            : updateAudio;
+        const update = (patch: any) => {
+            if (isGraph) {
+                updateGraphNode(editingNode!.id!, patch);
+            }
+            updateAudio(patch);
+        };
 
         return (
         <div className="space-y-6">
@@ -1267,6 +1270,7 @@ const AdminFunnels: React.FC = () => {
                 <FieldLabel label="Volume (0.0 - 1.0)" />
                 <NumberInput value={data.backgroundMusicVolume ?? 0.1} onChange={(v) => update({ backgroundMusicVolume: v })} min={0} step={0.1} />
             </div>
+            <Toggle checked={data.loop ?? true} onChange={(v) => update({ loop: v })} label="Loop da música" />
             <Toggle checked={data.messageSoundEnabled ?? true} onChange={(v) => update({ messageSoundEnabled: v })} label="Sons de Mensagem" />
         </div>
     )};
@@ -2086,6 +2090,8 @@ const AdminFunnels: React.FC = () => {
                 data = { sender: 'doctor', type: 'text', content: '', delay: 1000, ...data };
             } else if (type === 'image' || type === 'video' || type === 'audio') {
                 data = { sender: 'doctor', type: type, content: '', delay: 1000, ...data };
+            } else if (type === 'config-audio') {
+                data = { backgroundMusicUrl: '', backgroundMusicVolume: 0.1, messageSoundEnabled: true, loop: true, ...data };
             } else if (type === 'delay') {
                 data = { duration: 1000, ...data };
             } else if (type === 'condition') {
@@ -2195,7 +2201,7 @@ const AdminFunnels: React.FC = () => {
                             <Settings className="w-4 h-4 text-purple-400" />
                             <h3 className="font-bold text-white uppercase tracking-wider text-sm">
                                 {editingNode.type === 'doctor' && 'Doutora'}
-                                {editingNode.type === 'audio' && 'Áudio'}
+                                {editingNode.type === 'config-audio' && 'Áudio'}
                                 {editingNode.type === 'incoming-call' && 'Chamada'}
                                 {editingNode.type === 'video-call' && 'Vídeo VSL'}
                                 {['chat-message', 'message', 'text', 'image', 'video'].includes(editingNode.type) && 'Mensagem'}
@@ -2232,6 +2238,7 @@ const AdminFunnels: React.FC = () => {
                     
                     <div className="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-6">
                         {editingNode.type === 'doctor' && renderDoctorForm()}
+                        {editingNode.type === 'config-audio' && renderAudioForm()}
                         {editingNode.type === 'incoming-call' && renderIncomingCallForm()}
                         {editingNode.type === 'video-call' && renderVideoCallForm()}
                         {['chat-message', 'message', 'text', 'image', 'video', 'audio'].includes(editingNode.type) && renderChatMessageForm(editingNode.data)}

@@ -160,8 +160,14 @@ const FlowEditorContent: React.FC<{
       if (shouldShowNode('config-audio')) {
           initialNodes.push({
               id: 'config-audio',
-              type: 'audio',
-              data: { label: 'Configurações de Áudio' },
+              type: 'config-audio',
+              data: {
+                label: 'Configurações de Áudio',
+                backgroundMusicUrl: funnelDefinition.audio?.backgroundMusicUrl || '',
+                backgroundMusicVolume: funnelDefinition.audio?.backgroundMusicVolume ?? 0.1,
+                messageSoundEnabled: funnelDefinition.audio?.messageSoundEnabled ?? true,
+                loop: funnelDefinition.audio?.loop ?? true
+              },
               position: getPosition('config-audio', xPos + 220, yPos),
           });
       }

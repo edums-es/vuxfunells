@@ -24,6 +24,7 @@ const IncomingCall: React.FC<IncomingCallProps> = ({
 }) => {
   const [callStatus, setCallStatus] = useState<'ringing' | 'connected'>('ringing');
   const [timer, setTimer] = useState(0);
+  const [ringtoneNeedsGesture, setRingtoneNeedsGesture] = useState(false);
   const ringtoneRef = React.useRef<HTMLAudioElement | null>(null);
   const voiceRef = React.useRef<HTMLAudioElement | null>(null);
 
@@ -32,7 +33,7 @@ const IncomingCall: React.FC<IncomingCallProps> = ({
     if (ringtoneUrl && callStatus === 'ringing') {
        ringtoneRef.current = new Audio(ringtoneUrl);
        ringtoneRef.current.loop = true;
-       ringtoneRef.current.play().catch(err => console.error("Error playing ringtone:", err));
+       ringtoneRef.current.play().catch(() => setRingtoneNeedsGesture(true));
     }
 
     return () => {
@@ -44,23 +45,25 @@ const IncomingCall: React.FC<IncomingCallProps> = ({
   }, [ringtoneUrl, callStatus]);
 
   useEffect(() => {
+    if (!ringtoneNeedsGesture) return;
+    if (!ringtoneUrl) return;
+    if (callStatus !== 'ringing') return;
+
+    const tryPlay = () => {
+      if (!ringtoneRef.current) {
+        ringtoneRef.current = new Audio(ringtoneUrl);
+        ringtoneRef.current.loop = true;
+      }
+      ringtoneRef.current.play().then(() => setRingtoneNeedsGesture(false)).catch(() => {});
+    };
+
+    window.addEventListener('pointerdown', tryPlay, { once: true });
+    return () => window.removeEventListener('pointerdown', tryPlay);
+  }, [ringtoneNeedsGesture, ringtoneUrl, callStatus]);
+
+  useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (callStatus === 'connected') {
-      // Stop ringtone immediately when connected
-      if (ringtoneRef.current) {
-         ringtoneRef.current.pause();
-         ringtoneRef.current = null;
-      }
-
-      // Play voice if provided
-      if (voiceUrl) {
-         voiceRef.current = new Audio(voiceUrl);
-         voiceRef.current.play().catch(err => console.error("Error playing voice:", err));
-         
-         // If voice is longer than duration, maybe we should extend duration? 
-         // For now, let's respect the duration config but ensure we stop audio on exit
-      }
-
       interval = setInterval(() => {
         setTimer((prev) => prev + 1);
       }, 1000);
@@ -89,6 +92,14 @@ const IncomingCall: React.FC<IncomingCallProps> = ({
   }, [callStatus, onAnswer, voiceUrl, duration]);
 
   const handleAccept = () => {
+    if (ringtoneRef.current) {
+      ringtoneRef.current.pause();
+      ringtoneRef.current = null;
+    }
+    if (voiceUrl) {
+      voiceRef.current = new Audio(voiceUrl);
+      voiceRef.current.play().catch(() => {});
+    }
     setCallStatus('connected');
   };
 
