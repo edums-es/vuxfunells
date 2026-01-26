@@ -323,13 +323,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setMessages(prev => [...prev, userMsg]);
     setInputValue('');
     
-    // Graph Mode Handling
-    if (onMessageComplete) { // Assuming onMessageComplete is only passed in Graph Mode
-       // If we are here, it means the user sent a message.
-       // We should advance the graph.
-       setTimeout(() => onMessageComplete(), 500);
-       return;
-    }
+    // Graph Mode: quem avança o grafo é o callback onUserMessage (no App.tsx).
+    // onMessageComplete fica reservado apenas para auto-avanço após mensagens do "doctor".
 
     if (currentIndex < script.length) {
         const currentScriptMsg = script[currentIndex];

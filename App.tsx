@@ -163,6 +163,10 @@ const FunnelExperience: React.FC = () => {
      if (!graphMode || !currentNode) return;
 
      // Handle logic nodes that don't render a screen
+     if (currentNode.type === 'start') {
+         setTimeout(() => handleGraphNext(), 0);
+         return;
+     }
      if (currentNode.type === 'redirect') {
          if (currentNode.data.url) {
              window.location.href = currentNode.data.url;
@@ -277,7 +281,7 @@ const FunnelExperience: React.FC = () => {
       if (['message', 'image', 'video', 'audio', 'user_input'].includes(currentNode.type) || ['chat-message', 'text'].includes(currentNode.type)) {
           // Robust content recovery: check fullMessage first, then direct content
           const fullMsg = currentNode.data.fullMessage || {};
-          const content = fullMsg.content || currentNode.data.content || '';
+          const content = fullMsg.content || currentNode.data.content || (currentNode.type === 'user_input' ? (currentNode.data.variable || '') : '');
           
           // Robust mediaUrl recovery
           const mediaUrl = fullMsg.mediaUrl || currentNode.data.url || currentNode.data.mediaUrl;
@@ -531,15 +535,22 @@ const FunnelExperience: React.FC = () => {
                 
                 // Handle Graph Mode User Input
                 if (graphMode) {
+                    const isUserInputNode = currentNode?.type === 'user_input';
+                    const isQuickReplyNode = !!currentNode?.data?.quickReplies && Array.isArray(currentNode.data.quickReplies);
+                    const allowQuickReplyRouting = !!currentNode?.data?.enableQuickReplyRouting;
+
                     if (currentNode?.type === 'user_input') {
                         const varName = currentNode.data.variable;
                         if (varName && engine) {
                             engine.setVariable(varName, text);
                         }
                     }
-                    // Advance graph for both user_input AND chat-message with requiresInput
-                    // We pass the text as output in case edges are conditional based on reply
-                    handleGraphNext(text);
+                    const output =
+                      isUserInputNode ? text :
+                      (isQuickReplyNode && allowQuickReplyRouting) ? text :
+                      undefined;
+
+                    handleGraphNext(output);
                 }
               }}
               theme={theme}

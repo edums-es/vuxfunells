@@ -1,0 +1,462 @@
+{
+  "doctor": {
+    "name": "",
+    "role": "",
+    "avatarUrl": "",
+    "wallpaperUrl": ""
+  },
+  "chat": {
+    "part1": [],
+    "part2": [
+      {
+        "id": "vz5bACThwdrH-BJht2CPG",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "text",
+        "content": ""
+      },
+      {
+        "id": "XrSLEkmTvffIoF7dCA__q",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "image",
+        "content": ""
+      },
+      {
+        "id": "k7EMNMVcHKtLPdUdPL5Fq",
+        "sender": "doctor",
+        "delay": 1000,
+        "type": "audio",
+        "content": ""
+      }
+    ]
+  },
+  "videoCall": {
+    "videoUrl": "",
+    "duration": 0
+  },
+  "incomingCall": {
+    "duration": 0
+  },
+  "reviews": {
+    "items": []
+  },
+  "checkout": {
+    "headerLabel": "",
+    "headline": "",
+    "subheadline": "",
+    "badge": "",
+    "productName": "",
+    "price": "",
+    "compareAtPrice": "",
+    "valueCents": 0,
+    "primaryCtaText": "",
+    "secondaryCtaText": "",
+    "securePaymentText": "",
+    "bullets": [],
+    "guaranteeTitle": "",
+    "guaranteeText": "",
+    "checkoutReviews": [],
+    "footerLines": [],
+    "blocks": []
+  },
+  "offers": {
+    "upsells": [],
+    "downsells": []
+  },
+  "audio": {},
+  "nodes": [
+    {
+      "id": "start",
+      "type": "start",
+      "data": {
+        "label": "Início do Tráfego"
+      },
+      "position": {
+        "x": 400,
+        "y": 300
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    },
+    {
+      "id": "MJkjU6OY6eBcx-JmMo6yl",
+      "type": "doctor",
+      "data": {
+        "label": "doctor",
+        "name": "Lucia",
+        "role": "Puta",
+        "avatarUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/qMWEe5kjGgZWinqH2rR3h.webp"
+      },
+      "position": {
+        "x": 204.17804603860884,
+        "y": 486.1183062835126
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "vz5bACThwdrH-BJht2CPG",
+      "type": "chat-message",
+      "data": {
+        "sender": "doctor",
+        "type": "text",
+        "content": "Oi vida, gostou?",
+        "delay": 1000,
+        "label": "chat-message",
+        "quickReplies": [
+          {
+            "label": "Sim",
+            "value": "Sim"
+          }
+        ],
+        "requiresInput": true,
+        "enableQuickReplyRouting": false
+      },
+      "position": {
+        "x": 334.5856034587488,
+        "y": 808.5677591630251
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "UZKIBhg83CJcs6qFclRQw",
+      "type": "incoming-call",
+      "data": {
+        "label": "incoming-call",
+        "voiceUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/InShUvNprX2tjaz8LW1Jy.opus"
+      },
+      "position": {
+        "x": 534.4591172282329,
+        "y": 622.4786256535054
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "XrSLEkmTvffIoF7dCA__q",
+      "type": "image",
+      "data": {
+        "sender": "doctor",
+        "type": "image",
+        "content": "",
+        "delay": 1000,
+        "label": "image",
+        "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/HurEUjNlJ5yexwwXJhqAh.png",
+        "url": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/HurEUjNlJ5yexwwXJhqAh.png"
+      },
+      "position": {
+        "x": 694.9515126572488,
+        "y": 924.6820495245472
+      },
+      "measured": {
+        "width": 280,
+        "height": 233
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "k7EMNMVcHKtLPdUdPL5Fq",
+      "type": "audio",
+      "data": {
+        "sender": "doctor",
+        "type": "audio",
+        "content": "",
+        "delay": 1000,
+        "label": "audio",
+        "mediaUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/t9KViYZ8oAJtQYBBRKTIm.mp3",
+        "url": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/t9KViYZ8oAJtQYBBRKTIm.mp3"
+      },
+      "position": {
+        "x": 467.4163273990674,
+        "y": 1248.7114169598508
+      },
+      "measured": {
+        "width": 280,
+        "height": 233
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "PGqKSMxAZibRdZ6EmWHE3",
+      "type": "user_input",
+      "data": {
+        "inputType": "text",
+        "required": true,
+        "label": "user_input",
+        "variable": "Qual seu nome?",
+        "placeholder": "seu nome"
+      },
+      "position": {
+        "x": 601.4811141466706,
+        "y": 1619.5659569239997
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "dbfKFLYYGPLLwipXWUb3m",
+      "type": "checkout",
+      "data": {
+        "productName": "Packzinho do amor",
+        "price": "R$ 97",
+        "label": "checkout",
+        "valueCents": 5
+      },
+      "position": {
+        "x": 405.0992941347202,
+        "y": 1889.1452152400864
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "slf9iBOS_XZHeVhGBuXcw",
+      "type": "reviews",
+      "data": {
+        "items": [
+          {
+            "id": 1,
+            "name": "Joao",
+            "age": 30,
+            "location": "São Paulo",
+            "text": "Muito gostosa",
+            "likes": "5",
+            "comments": [],
+            "avatarUrl": "https://njdqlgtgapqtwzksjycj.supabase.co/storage/v1/object/public/uploads/wtn9oAGxfqRgdrG0Uw5zj.png"
+          }
+        ],
+        "label": "reviews"
+      },
+      "position": {
+        "x": 539.0992941347201,
+        "y": 2075.1452152400866
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "RYD8vnG8CQUikYOFjaSVx",
+      "type": "upsell",
+      "data": {
+        "label": "upsell",
+        "title": "Chamada de Video",
+        "subtitle": "Acesso ao meu whatsapp bb",
+        "price": "197",
+        "valueCents": 1
+      },
+      "position": {
+        "x": 786.0199383287179,
+        "y": 2290.1436430222275
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      },
+      "selected": true,
+      "dragging": false
+    },
+    {
+      "id": "xVqtfmiAhBFXcOyZzqpT2",
+      "type": "end",
+      "data": {
+        "label": "end"
+      },
+      "position": {
+        "x": 809.7710807226298,
+        "y": 2556.6842409983515
+      },
+      "measured": {
+        "width": 280,
+        "height": 88
+      }
+    }
+  ],
+  "edges": [
+    {
+      "animated": true,
+      "style": {
+        "stroke": "#4b5563",
+        "strokeWidth": 2
+      },
+      "type": "smoothstep",
+      "source": "start",
+      "target": "MJkjU6OY6eBcx-JmMo6yl",
+      "id": "xy-edge__start-MJkjU6OY6eBcx-JmMo6yl"
+    },
+    {
+      "animated": true,
+      "style": {
+        "stroke": "#4b5563",
+        "strokeWidth": 2
+      },
+      "type": "smoothstep",
+      "source": "MJkjU6OY6eBcx-JmMo6yl",
+      "target": "UZKIBhg83CJcs6qFclRQw",
+      "id": "xy-edge__MJkjU6OY6eBcx-JmMo6yl-UZKIBhg83CJcs6qFclRQw"
+    },
+    {
+      "animated": true,
+      "style": {
+        "stroke": "#4b5563",
+        "strokeWidth": 2
+      },
+      "type": "smoothstep",
+      "source": "UZKIBhg83CJcs6qFclRQw",
+      "target": "vz5bACThwdrH-BJht2CPG",
+      "id": "xy-edge__UZKIBhg83CJcs6qFclRQw-vz5bACThwdrH-BJht2CPG"
+    },
+    {
+      "animated": true,
+      "style": {
+        "stroke": "#4b5563",
+        "strokeWidth": 2
+      },
+      "type": "smoothstep",
+      "source": "vz5bACThwdrH-BJht2CPG",
+      "target": "XrSLEkmTvffIoF7dCA__q",
+      "id": "xy-edge__vz5bACThwdrH-BJht2CPG-XrSLEkmTvffIoF7dCA__q"
+    },
+    {
+      "animated": true,
+      "style": {
+        "stroke": "#4b5563",
+        "strokeWidth": 2
+      },
+      "type": "smoothstep",
+      "source": "XrSLEkmTvffIoF7dCA__q",
+      "target": "k7EMNMVcHKtLPdUdPL5Fq",
+      "id": "xy-edge__XrSLEkmTvffIoF7dCA__q-k7EMNMVcHKtLPdUdPL5Fq"
+    },
+    {
+      "animated": true,
+      "style": {
+        "stroke": "#4b5563",
+        "strokeWidth": 2
+      },
+      "type": "smoothstep",
+      "source": "k7EMNMVcHKtLPdUdPL5Fq",
+      "target": "PGqKSMxAZibRdZ6EmWHE3",
+      "id": "xy-edge__k7EMNMVcHKtLPdUdPL5Fq-PGqKSMxAZibRdZ6EmWHE3"
+    },
+    {
+      "animated": true,
+      "style": {
+        "stroke": "#4b5563",
+        "strokeWidth": 2
+      },
+      "type": "smoothstep",
+      "source": "PGqKSMxAZibRdZ6EmWHE3",
+      "target": "dbfKFLYYGPLLwipXWUb3m",
+      "id": "xy-edge__PGqKSMxAZibRdZ6EmWHE3-dbfKFLYYGPLLwipXWUb3m"
+    },
+    {
+      "animated": true,
+      "style": {
+        "stroke": "#4b5563",
+        "strokeWidth": 2
+      },
+      "type": "smoothstep",
+      "source": "dbfKFLYYGPLLwipXWUb3m",
+      "target": "slf9iBOS_XZHeVhGBuXcw",
+      "id": "xy-edge__dbfKFLYYGPLLwipXWUb3m-slf9iBOS_XZHeVhGBuXcw"
+    },
+    {
+      "animated": true,
+      "style": {
+        "stroke": "#4b5563",
+        "strokeWidth": 2
+      },
+      "type": "smoothstep",
+      "source": "slf9iBOS_XZHeVhGBuXcw",
+      "target": "RYD8vnG8CQUikYOFjaSVx",
+      "id": "xy-edge__slf9iBOS_XZHeVhGBuXcw-RYD8vnG8CQUikYOFjaSVx"
+    },
+    {
+      "animated": true,
+      "style": {
+        "stroke": "#4b5563",
+        "strokeWidth": 2
+      },
+      "type": "smoothstep",
+      "source": "RYD8vnG8CQUikYOFjaSVx",
+      "target": "xVqtfmiAhBFXcOyZzqpT2",
+      "id": "xy-edge__RYD8vnG8CQUikYOFjaSVx-xVqtfmiAhBFXcOyZzqpT2"
+    }
+  ],
+  "layout": {
+    "start": {
+      "x": 400,
+      "y": 300
+    },
+    "MJkjU6OY6eBcx-JmMo6yl": {
+      "x": 204.17804603860884,
+      "y": 486.1183062835126
+    },
+    "vz5bACThwdrH-BJht2CPG": {
+      "x": 334.5856034587488,
+      "y": 808.5677591630251
+    },
+    "UZKIBhg83CJcs6qFclRQw": {
+      "x": 534.4591172282329,
+      "y": 622.4786256535054
+    },
+    "XrSLEkmTvffIoF7dCA__q": {
+      "x": 694.9515126572488,
+      "y": 924.6820495245472
+    },
+    "k7EMNMVcHKtLPdUdPL5Fq": {
+      "x": 467.4163273990674,
+      "y": 1248.7114169598508
+    },
+    "PGqKSMxAZibRdZ6EmWHE3": {
+      "x": 601.4811141466706,
+      "y": 1619.5659569239997
+    },
+    "dbfKFLYYGPLLwipXWUb3m": {
+      "x": 405.0992941347202,
+      "y": 1889.1452152400864
+    },
+    "slf9iBOS_XZHeVhGBuXcw": {
+      "x": 539.0992941347201,
+      "y": 2075.1452152400866
+    },
+    "RYD8vnG8CQUikYOFjaSVx": {
+      "x": 786.0199383287179,
+      "y": 2290.1436430222275
+    },
+    "xVqtfmiAhBFXcOyZzqpT2": {
+      "x": 809.7710807226298,
+      "y": 2556.6842409983515
+    }
+  }
+}
