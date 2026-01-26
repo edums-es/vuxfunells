@@ -15,9 +15,51 @@ interface VideoCallProps {
 
 type CallState = 'incoming' | 'connecting' | 'connected' | 'ending';
 
+function isProbablyDirectVideoUrl(url: string) {
+  const u = url.toLowerCase();
+  return (
+    u.endsWith('.mp4') ||
+    u.endsWith('.webm') ||
+    u.endsWith('.ogg') ||
+    u.endsWith('.mov') ||
+    u.endsWith('.m4v')
+  );
+}
+
+function getEmbedUrl(url: string) {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+
+    if (host.includes('youtu.be')) {
+      const id = u.pathname.split('/').filter(Boolean)[0];
+      return id ? `https://www.youtube.com/embed/${id}?autoplay=1&playsinline=1` : null;
+    }
+
+    if (host.includes('youtube.com')) {
+      const id = u.searchParams.get('v');
+      if (id) return `https://www.youtube.com/embed/${id}?autoplay=1&playsinline=1`;
+      if (u.pathname.startsWith('/embed/')) return url;
+    }
+
+    if (host.includes('vimeo.com')) {
+      const parts = u.pathname.split('/').filter(Boolean);
+      const id = parts.find((p) => /^\d+$/.test(p));
+      return id ? `https://player.vimeo.com/video/${id}?autoplay=1` : null;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 const VideoCall: React.FC<VideoCallProps> = ({ onEndCall, doctorName, doctorAvatarUrl, videoUrl, audioUrl, duration = 60, theme = 'dark' }) => {
   const [callState, setCallState] = useState<CallState>('incoming');
   const [timeLeft, setTimeLeft] = useState(duration); 
+
+  const embedUrl = videoUrl ? getEmbedUrl(videoUrl) : null;
+  const useIframe = !!(videoUrl && embedUrl && !isProbablyDirectVideoUrl(videoUrl));
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -41,6 +83,10 @@ const VideoCall: React.FC<VideoCallProps> = ({ onEndCall, doctorName, doctorAvat
                         handleHangup();
                         return 0;
                     }
+                    if (useIframe) {
+                        handleHangup();
+                        return 0;
+                    }
                     // If media exists, let it finish naturally. 
                     // Do NOT auto-hangup here to avoid premature cuts.
                     return 0;
@@ -50,7 +96,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ onEndCall, doctorName, doctorAvat
         }, 1000);
     }
     return () => clearInterval(interval);
-  }, [callState, videoUrl, audioUrl]); // Added videoUrl/audioUrl dependencies
+  }, [callState, videoUrl, audioUrl, useIframe]); // Added videoUrl/audioUrl dependencies
 
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const audioRef = React.useRef<HTMLAudioElement>(null);
@@ -59,16 +105,16 @@ const VideoCall: React.FC<VideoCallProps> = ({ onEndCall, doctorName, doctorAvat
 
   useEffect(() => {
     if (callState === 'connected') {
-        if (videoUrl && videoRef.current) {
+        if (videoUrl && videoRef.current && !useIframe) {
             videoRef.current.play().catch(() => setShowPlayButton(true));
         } else if (audioUrl && audioRef.current) {
             audioRef.current.play().catch(() => setShowPlayButton(true));
         }
     }
-  }, [callState, videoUrl, audioUrl]);
+  }, [callState, videoUrl, audioUrl, useIframe]);
 
   const handleManualPlay = () => {
-      if (videoUrl && videoRef.current) {
+      if (videoUrl && videoRef.current && !useIframe) {
           videoRef.current.play();
       } else if (audioUrl && audioRef.current) {
           audioRef.current.play();
@@ -171,18 +217,29 @@ const VideoCall: React.FC<VideoCallProps> = ({ onEndCall, doctorName, doctorAvat
                 {/* Active Video/Audio Feed */}
                 {videoUrl ? (
                   <>
-                    <video 
-                      ref={videoRef}
-                      src={videoUrl} 
-                      className="w-full h-full object-cover animate-in fade-in duration-1000"
-                      playsInline
-                       muted={false} // User likely expects sound
-                       onEnded={handleHangup}
-                       onError={(e) => {
-                         console.error('Video Error:', e);
-                         setVideoError(true);
-                       }}
-                     />
+                    {useIframe ? (
+                      <iframe
+                        src={embedUrl || videoUrl}
+                        className="w-full h-full"
+                        allow="autoplay; fullscreen; picture-in-picture"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <video 
+                        ref={videoRef}
+                        src={videoUrl} 
+                        className="w-full h-full object-cover animate-in fade-in duration-1000"
+                        playsInline
+                        muted={false}
+                        controls={false}
+                        preload="auto"
+                        onEnded={handleHangup}
+                        onError={(e) => {
+                          console.error('Video Error:', e);
+                          setVideoError(true);
+                        }}
+                      />
+                    )}
                      {videoError && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center z-50 bg-neutral-900/90 text-center p-6">
                             <p className="text-red-500 font-bold mb-2">Erro ao carregar vídeo</p>
@@ -195,7 +252,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ onEndCall, doctorName, doctorAvat
                             </button>
                         </div>
                      )}
-                     {!videoError && showPlayButton && (
+                     {!videoError && showPlayButton && !useIframe && (
                          <div className="absolute inset-0 flex items-center justify-center z-50 bg-black/40">
                              <button 
                                  onClick={handleManualPlay}

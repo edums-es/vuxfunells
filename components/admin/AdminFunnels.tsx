@@ -462,12 +462,24 @@ const AdminFunnels: React.FC = () => {
     setSaving(true);
     setError(null);
     try {
-      const def =
-        mode === 'json'
-          ? (JSON.parse(draftJson) as FunnelDefinition)
-          : (getFlowDefinitionRef.current ? getFlowDefinitionRef.current() : draftDef);
+      const def = mode === 'json' ? (JSON.parse(draftJson) as FunnelDefinition) : draftDef;
       if (!def) throw new Error('Definição vazia');
-      const res = await adminUpdateFunnel(active.id, { name: nameDraft.trim() || active.name, definition: def });
+      const flowDef = mode === 'json' ? null : getFlowDefinitionRef.current?.() || null;
+      let merged: FunnelDefinition = def;
+      if (flowDef && Array.isArray(flowDef.nodes) && flowDef.nodes.length > 0) {
+        const draftNodesById = new Map((def.nodes || []).map((n) => [n.id, n]));
+        const mergedNodes = flowDef.nodes.map((n) => {
+          const fromDraft = draftNodesById.get(n.id);
+          return fromDraft ? { ...n, data: fromDraft.data } : n;
+        });
+        merged = {
+          ...def,
+          nodes: mergedNodes as any,
+          edges: (flowDef.edges || []) as any,
+          layout: mergedNodes.reduce((acc, n) => ({ ...acc, [n.id]: n.position }), {})
+        };
+      }
+      const res = await adminUpdateFunnel(active.id, { name: nameDraft.trim() || active.name, definition: merged });
       setFunnels((prev) => prev.map((f) => (f.id === active.id ? res.funnel : f)));
       const normalized = ensureDefinition(res.funnel.definition);
       setDraftDef(cloneDeep(normalized));
