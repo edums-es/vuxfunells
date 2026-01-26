@@ -147,9 +147,10 @@ const FunnelExperience: React.FC = () => {
   const [currentNode, setCurrentNode] = useState<FlowNode | null>(null);
 
   const handleGraphNext = useCallback((output?: string) => {
-      if (!engine) return;
+      if (!engine) return null;
       const nextNode = engine.next(output);
       setCurrentNode(nextNode);
+      return nextNode;
   }, [engine]);
 
 
@@ -474,7 +475,10 @@ const FunnelExperience: React.FC = () => {
               theme={theme}
               onAnswer={() => {
              if (graphMode) {
-                 handleGraphNext();
+                 const next = handleGraphNext();
+                 if (!next) {
+                   handleStepTransition(ScreenStep.CHAT_PART_1);
+                 }
                  return;
              }
              if (incomingCallConfig?.autoStartVideo) {

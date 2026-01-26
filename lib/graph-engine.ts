@@ -65,6 +65,23 @@ export class GraphEngine {
           return this.getCurrentNode();
         }
       }
+      const current = this.getCurrentNode();
+      const currentPosY = (current as any)?.position?.y;
+      const currentPosX = (current as any)?.position?.x;
+      const hasPos = Number.isFinite(currentPosY) && Number.isFinite(currentPosX);
+      const sorted = (this.definition.nodes || [])
+        .filter((n) => !isConfigNode(n.type))
+        .slice()
+        .sort((a: any, b: any) => (a.position?.y ?? 0) - (b.position?.y ?? 0) || (a.position?.x ?? 0) - (b.position?.x ?? 0));
+
+      if (!hasPos) return null;
+      const idx = sorted.findIndex((n) => n.id === this.currentNodeId);
+      if (idx !== -1 && sorted[idx + 1]) {
+        this.currentNodeId = sorted[idx + 1].id;
+        this.history.push(this.currentNodeId);
+        return this.getCurrentNode();
+      }
+
       return null;
     }
 
