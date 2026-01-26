@@ -288,8 +288,9 @@ const FunnelExperience: React.FC = () => {
           // 2. data.requiresInput is true
           // 3. fullMessage.requiresInput is true
           const requiresInput = currentNode.type === 'user_input' || 
-                                !!currentNode.data.requiresInput || 
-                                !!fullMsg.requiresInput;
+                               !!currentNode.data.requiresInput || 
+                               !!fullMsg.requiresInput || 
+                               (Array.isArray(fullMsg.quickReplies) && fullMsg.quickReplies.length > 0 && currentNode.data.waitForReply !== false);
 
           return {
               id: currentNode.id,

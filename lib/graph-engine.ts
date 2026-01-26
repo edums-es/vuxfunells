@@ -88,9 +88,10 @@ export class GraphEngine {
     let targetEdge: FlowEdge | undefined;
 
     if (output) {
-      // Try to match specific handle or label (conditional logic)
-      // Assuming 'output' matches 'sourceHandle' or 'label'
-      targetEdge = edges.find(e => e.sourceHandle === output || e.label === output);
+      const normalized = String(output).trim().toLowerCase();
+      targetEdge =
+        edges.find((e) => (e.sourceHandle || '').toLowerCase() === normalized) ||
+        edges.find((e) => (e.label || '').toLowerCase() === normalized);
     }
 
     // Fallback to default edge (first one or unlabelled)

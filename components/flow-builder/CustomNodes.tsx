@@ -81,7 +81,7 @@ const CustomNodeBase = ({ id, data, type, selected }: NodeProps & { type: string
 
   return (
     <div className={cn(
-      "w-[280px] rounded-xl overflow-hidden shadow-lg transition-all duration-200 bg-neutral-900 border-2 group relative",
+      "w-[280px] rounded-xl overflow-visible shadow-lg transition-all duration-200 border-2 group relative",
       selected ? "border-white ring-2 ring-white/20 scale-105" : "border-transparent hover:border-white/20"
     )}>
       {/* Delete Button (visible on hover or selected) */}
@@ -93,17 +93,18 @@ const CustomNodeBase = ({ id, data, type, selected }: NodeProps & { type: string
         <Trash2 className="w-3 h-3" />
       </button>
 
-      {/* Header Colorido */}
-      <div 
-        className="px-4 py-2 flex items-center gap-2 text-white font-bold text-xs uppercase tracking-wider"
-        style={{ backgroundColor: config.color }}
-      >
-        <Icon className="w-4 h-4" />
-        <span className="truncate">{customLabel}</span>
-      </div>
+      <div className="rounded-xl overflow-hidden bg-neutral-900">
+        {/* Header Colorido */}
+        <div 
+          className="px-4 py-2 flex items-center gap-2 text-white font-bold text-xs uppercase tracking-wider"
+          style={{ backgroundColor: config.color }}
+        >
+          <Icon className="w-4 h-4" />
+          <span className="truncate">{customLabel}</span>
+        </div>
 
-      {/* Corpo do Card */}
-      <div className="p-4 bg-neutral-900 text-neutral-200 text-sm">
+        {/* Corpo do Card */}
+        <div className="p-4 bg-neutral-900 text-neutral-200 text-sm">
           {(type === 'image' || type === 'video' || type === 'audio') && ((data as any)?.url || (data as any)?.mediaUrl) && (
           <div className="mb-2 rounded overflow-hidden relative aspect-video bg-black/50 flex items-center justify-center">
             {type === 'image' ? (
@@ -130,6 +131,7 @@ const CustomNodeBase = ({ id, data, type, selected }: NodeProps & { type: string
             ))}
           </div>
         )}
+        </div>
       </div>
 
       {/* Handles para conexões - AUMENTADO PARA FACILITAR CONEXÃO */}
@@ -138,7 +140,7 @@ const CustomNodeBase = ({ id, data, type, selected }: NodeProps & { type: string
         <Handle 
           type="target" 
           position={Position.Top} 
-          className="!bg-white !w-4 !h-4 !border-4 !border-neutral-900 hover:!bg-purple-400 hover:!w-5 hover:!h-5 transition-all" 
+          className="!bg-white !w-5 !h-5 !border-[3px] !border-neutral-900 hover:!bg-purple-400 hover:!w-6 hover:!h-6 transition-all !-top-2"
         />
       )}
       {/* End node only has target */}
@@ -146,7 +148,7 @@ const CustomNodeBase = ({ id, data, type, selected }: NodeProps & { type: string
         <Handle 
           type="source" 
           position={Position.Bottom} 
-          className="!bg-white !w-4 !h-4 !border-4 !border-neutral-900 hover:!bg-purple-400 hover:!w-5 hover:!h-5 transition-all" 
+          className="!bg-white !w-5 !h-5 !border-[3px] !border-neutral-900 hover:!bg-purple-400 hover:!w-6 hover:!h-6 transition-all !-bottom-2"
         />
       )}
     </div>

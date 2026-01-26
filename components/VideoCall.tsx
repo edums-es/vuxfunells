@@ -39,6 +39,12 @@ function getEmbedUrl(url: string) {
     if (host.includes('youtube.com')) {
       const id = u.searchParams.get('v');
       if (id) return `https://www.youtube.com/embed/${id}?autoplay=1&playsinline=1`;
+      if (u.pathname.startsWith('/shorts/')) {
+        const parts = u.pathname.split('/').filter(Boolean);
+        const shortsIdx = parts.indexOf('shorts');
+        const shortId = shortsIdx !== -1 ? parts[shortsIdx + 1] : null;
+        return shortId ? `https://www.youtube.com/embed/${shortId}?autoplay=1&playsinline=1` : null;
+      }
       if (u.pathname.startsWith('/embed/')) return url;
     }
 
@@ -59,7 +65,9 @@ const VideoCall: React.FC<VideoCallProps> = ({ onEndCall, doctorName, doctorAvat
   const [timeLeft, setTimeLeft] = useState(duration); 
 
   const embedUrl = videoUrl ? getEmbedUrl(videoUrl) : null;
-  const useIframe = !!(videoUrl && embedUrl && !isProbablyDirectVideoUrl(videoUrl));
+  const isDirectVideo = !!(videoUrl && isProbablyDirectVideoUrl(videoUrl));
+  const isUnsupportedVideoUrl = !!(videoUrl && !isDirectVideo && !embedUrl);
+  const useIframe = !!(videoUrl && embedUrl && !isDirectVideo);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -217,11 +225,22 @@ const VideoCall: React.FC<VideoCallProps> = ({ onEndCall, doctorName, doctorAvat
                 {/* Active Video/Audio Feed */}
                 {videoUrl ? (
                   <>
-                    {useIframe ? (
+                    {isUnsupportedVideoUrl ? (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center z-50 bg-neutral-900/90 text-center p-6">
+                        <p className="text-red-500 font-bold mb-2">URL de vídeo não suportada</p>
+                        <p className="text-white/60 text-sm mb-4">Use um link direto (.mp4) ou um link do YouTube/Vimeo.</p>
+                        <button 
+                          onClick={handleHangup}
+                          className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-full text-white text-sm font-medium transition-colors"
+                        >
+                          Encerrar chamada
+                        </button>
+                      </div>
+                    ) : useIframe ? (
                       <iframe
                         src={embedUrl || videoUrl}
                         className="w-full h-full"
-                        allow="autoplay; fullscreen; picture-in-picture"
+                        allow="autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write; accelerometer; gyroscope"
                         allowFullScreen
                       />
                     ) : (

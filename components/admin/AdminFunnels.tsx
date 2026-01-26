@@ -1410,6 +1410,18 @@ const AdminFunnels: React.FC = () => {
                                     </div>
                                 ))}
                             </div>
+                            <div className="mt-4 space-y-3">
+                                <Toggle 
+                                  label="Aguardar resposta do usuário antes de continuar" 
+                                  checked={!!m.requiresInput} 
+                                  onChange={(v) => update({ requiresInput: v })} 
+                                />
+                                <Toggle 
+                                  label="Roteamento condicional pelos botões (usa o valor do botão)" 
+                                  checked={!!m.enableQuickReplyRouting} 
+                                  onChange={(v) => update({ enableQuickReplyRouting: v })} 
+                                />
+                            </div>
                         </div>
                     )}
                 </div>
@@ -1493,6 +1505,18 @@ const AdminFunnels: React.FC = () => {
                                     }}><X className="w-4 h-4" /></button>
                                 </div>
                             ))}
+                        </div>
+                        <div className="mt-4 space-y-3">
+                            <Toggle 
+                              label="Aguardar resposta do usuário antes de continuar" 
+                              checked={!!m.requiresInput} 
+                              onChange={(v) => updateChatMessage(part, index, { requiresInput: v })} 
+                            />
+                            <Toggle 
+                              label="Roteamento condicional pelos botões (usa o valor do botão)" 
+                              checked={!!m.enableQuickReplyRouting} 
+                              onChange={(v) => updateChatMessage(part, index, { enableQuickReplyRouting: v })} 
+                            />
                         </div>
                     </div>
                 )}

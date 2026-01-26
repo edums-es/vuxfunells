@@ -433,6 +433,11 @@ const FlowEditorContent: React.FC<{
     [],
     );
 
+  const onEdgeClick = useCallback((event: React.MouseEvent, edge: Edge) => {
+      event.stopPropagation();
+      setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+  }, []);
+
   const onConnect: OnConnect = useCallback(
     (params) => {
         setEdges((eds) => addEdge(params, eds));
@@ -488,6 +493,7 @@ const FlowEditorContent: React.FC<{
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
+            onEdgeClick={onEdgeClick}
             onNodeClick={handleNodeClick}
             onNodeDragStop={onNodeDragStop}
             onInit={setReactFlowInstance}

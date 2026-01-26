@@ -23,6 +23,7 @@ export interface ChatMessage {
   action?: 'open_video' | 'open_reviews' | 'skip_video'; // Special triggers
   quickReplies?: QuickReply[];
   forceVideo?: boolean;
+  enableQuickReplyRouting?: boolean;
 }
 
 export interface QuickReply {
